@@ -9,6 +9,18 @@ export type CreatePaymentState = {
   error?: string
 }
 
+function getTodayInPaymentTimeZone() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+
+  return `${values.year}-${values.month}-${values.day}`
+}
+
 export async function createPayment(_previousState: CreatePaymentState, formData: FormData): Promise<CreatePaymentState> {
   const type = String(formData.get('type') ?? '').trim()
   const tranId = String(formData.get('tran_id') ?? '').trim()
@@ -21,6 +33,7 @@ export async function createPayment(_previousState: CreatePaymentState, formData
   const validDevices = [...Array.from({ length: 8 }, (_, index) => `CP${index + 1}`), 'ME']
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) return { error: 'Enter a valid payment date.' }
+  if (paymentDate < getTodayInPaymentTimeZone()) return { error: 'Payment date cannot be in the past.' }
   if (!paymentTime) return { error: 'Enter the payment time.' }
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Amount must be greater than zero.' }
 
@@ -54,6 +67,15 @@ export async function createPayment(_previousState: CreatePaymentState, formData
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const { count: balanceCount, error: balanceError } = await supabase
+    .from('balances')
+    .select('id', { count: 'exact', head: true })
+    .eq('date', getTodayInPaymentTimeZone())
+
+  if (balanceError || !balanceCount) {
+    return { error: 'Set today’s balance before adding a transaction.' }
+  }
 
   const { error } = await supabase.from('payments').insert({
     type,

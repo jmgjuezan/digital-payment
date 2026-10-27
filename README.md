@@ -85,7 +85,51 @@ The dashboard and transaction form use the `payments` table fields documented in
 | `npm run build` | Create an optimized production build |
 | `npm run start` | Serve the production build locally |
 
-For a production run, execute `npm run build` and then `npm run start`. Configure the Supabase environment variables in the target deployment environment as well.
+## Deploying to Vercel
+
+This project is configured for Vercel using the Next.js framework preset.
+
+1. Install the Vercel CLI if it is not already available:
+
+   ```sh
+   npm install --global vercel
+   ```
+
+2. Authenticate with Vercel and link the repository directory to your Vercel project:
+
+   ```sh
+   vercel login
+   vercel link
+   ```
+
+   The `.vercel` directory contains local project-link metadata. It is ignored by Git and should not be committed.
+
+3. Configure these environment variables in the Vercel project settings for Development, Preview, and Production:
+
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+   Use the values from the Supabase project. Do not configure a Supabase `service_role` or secret key as a `NEXT_PUBLIC_` variable. Vercel supplies its system environment variables automatically; do not copy `VERCEL_OIDC_TOKEN` from a local environment file.
+
+4. Deploy a preview build:
+
+   ```sh
+   vercel
+   ```
+
+5. Deploy to production:
+
+   ```sh
+   vercel deploy --prod
+   ```
+
+6. Add the deployed application URL to the allowed redirect URLs in Supabase Authentication settings. Confirm Supabase Row Level Security policies allow authenticated users to read and insert the records required by the app.
+
+Vercel Deployment Protection may require viewers to authenticate with Vercel before they can open a deployment. If the project is not connected to its Git provider, deployments must be initiated with the Vercel CLI; connect the Git repository in Vercel project settings to enable automatic deployments on pushes.
+
+## Local Production Run
+
+To test a production build locally, run `npm run build` followed by `npm run start`. Configure the Supabase environment variables in the deployment environment as described above.
 
 ## Repository Guide
 

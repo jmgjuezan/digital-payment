@@ -1,7 +1,10 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowDown, ArrowUp, CalendarDays, LayoutGrid, List, LogOut, Plus, ReceiptText, X } from 'lucide-react'
+import { checkTodayBalance } from '@/app/dashboard/actions'
+import BalanceRequiredDialog from '@/components/transactions/BalanceRequiredDialog'
 
 export type Payment = {
   id: number
@@ -24,6 +27,7 @@ const paymentFields: { value: SortField; label: string }[] = [
   { value: 'payment_date', label: 'Payment date' },
   { value: 'date', label: 'Payment time' },
   { value: 'type', label: 'Type' },
+  { value: 'tran_id', label: 'Transaction ID' },
   { value: 'charge', label: 'Charge' },
   { value: 'amount', label: 'Amount' },
   { value: 'device', label: 'Device' },
@@ -109,7 +113,24 @@ export default function DashboardTransactions({
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [isCheckingBalance, startBalanceCheck] = useTransition()
+  const [showBalanceRequired, setShowBalanceRequired] = useState(false)
+  const [balanceCheckError, setBalanceCheckError] = useState(false)
+  const router = useRouter()
   const summaryDialogRef = useRef<HTMLDialogElement>(null)
+
+  function handleAddTransaction() {
+    startBalanceCheck(async () => {
+      const result = await checkTodayBalance()
+      if (result.hasBalance) {
+        router.push('/transactions/new')
+        return
+      }
+
+      setBalanceCheckError(result.hasError)
+      setShowBalanceRequired(true)
+    })
+  }
 
   const sortedTransactions = useMemo(
     () => [...transactions].sort((first, second) => comparePayments(first, second, sortField, sortDirection)),
@@ -118,14 +139,15 @@ export default function DashboardTransactions({
   const totalAmount = transactions.reduce((total, payment) => total + Number(payment.amount || 0), 0)
   const totalCharges = transactions.reduce((total, payment) => total + Number(payment.charge || 0), 0)
   const totalsByType = useMemo(() => {
-    const totals = new Map<string, { count: number; amount: number }>()
+    const totals = new Map<string, { count: number; amount: number; charge: number }>()
 
     for (const payment of transactions) {
       const type = payment.type || 'Unspecified'
-      const current = totals.get(type) ?? { count: 0, amount: 0 }
+      const current = totals.get(type) ?? { count: 0, amount: 0, charge: 0 }
       totals.set(type, {
         count: current.count + 1,
         amount: current.amount + Number(payment.amount || 0),
+        charge: current.charge + Number(payment.charge || 0),
       })
     }
 
@@ -140,11 +162,11 @@ export default function DashboardTransactions({
           <span>Digital Payment</span>
         </a>
         <div className='dashboard-header-actions'>
-          <a className='add-transaction-button' href='/transactions/new'>
+          <button className='add-transaction-button' type='button' onClick={handleAddTransaction} disabled={isCheckingBalance}>
             <Plus size={16} aria-hidden='true' />
-            <span>Add transaction</span>
-          </a>
-          <span className='dashboard-secure-label'>Payments overview</span>
+            <span>{isCheckingBalance ? 'Checking…' : 'Add transaction'}</span>
+          </button>
+          <a className='set-balance-button' href='/balances'>Balances</a>
           {userEmail && <span className='dashboard-user-email' title={userEmail}>{userEmail}</span>}
           <form action='/auth/signout' method='post'>
             <button className='dashboard-logout' type='submit'>
@@ -154,6 +176,12 @@ export default function DashboardTransactions({
           </form>
         </div>
       </header>
+
+      <BalanceRequiredDialog
+        open={showBalanceRequired}
+        hasError={balanceCheckError}
+        onClose={() => setShowBalanceRequired(false)}
+      />
 
       <section className='dashboard-content' aria-labelledby='dashboard-title'>
         <div className='dashboard-heading-row'>
@@ -216,6 +244,7 @@ export default function DashboardTransactions({
                     <th scope='col'>Payment type</th>
                     <th scope='col'>Transactions</th>
                     <th scope='col'>Total amount</th>
+                    <th scope='col'>Total charges</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -224,6 +253,7 @@ export default function DashboardTransactions({
                       <th scope='row'>{type}</th>
                       <td>{totals.count}</td>
                       <td>{currency.format(totals.amount)}</td>
+                      <td>{currency.format(totals.charge)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -232,7 +262,10 @@ export default function DashboardTransactions({
           )}
           <div className='type-summary-dialog-footer'>
             <span>{transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}</span>
-            <strong>{currency.format(totalAmount)}</strong>
+            <div className='type-summary-footer-totals'>
+              <span>Amount <strong>{currency.format(totalAmount)}</strong></span>
+              <span>Charges <strong>{currency.format(totalCharges)}</strong></span>
+            </div>
           </div>
         </dialog>
 

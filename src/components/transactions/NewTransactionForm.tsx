@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { createPayment, type CreatePaymentState } from '@/app/transactions/new/actions'
+import { calculatePaymentCharge } from '@/lib/payment-charge'
 import { paymentTypeOptions } from '@/lib/payment-options'
 
 const initialState: CreatePaymentState = {}
@@ -23,7 +24,10 @@ export default function NewTransactionForm() {
   const [state, action, pending] = useActionState(createPayment, initialState)
   const [paymentType, setPaymentType] = useState('')
   const [paymentDate, setPaymentDate] = useState(getTodayInPaymentTimeZone)
+  const [amount, setAmount] = useState('')
+  const [charge, setCharge] = useState('0.00')
   const transactionIdRequired = paymentType.endsWith('Cash-out')
+  const today = getTodayInPaymentTimeZone()
 
   function preventNegativeAmount(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === '-' || event.key === 'Subtract') event.preventDefault()
@@ -37,7 +41,19 @@ export default function NewTransactionForm() {
     <form className='new-transaction-form' action={action}>
       <div className='form-field'>
         <label htmlFor='type'>Payment type <span aria-hidden='true'>*</span></label>
-        <select id='type' name='type' required value={paymentType} onChange={(event) => setPaymentType(event.target.value)}>
+        <select
+          id='type'
+          name='type'
+          required
+          value={paymentType}
+          onChange={(event) => {
+            const nextType = event.target.value
+            setPaymentType(nextType)
+            if (nextType !== 'GCash Load') {
+              setCharge(calculatePaymentCharge(nextType, Number(amount)).toFixed(2))
+            }
+          }}
+        >
           <option value='' disabled>Select payment type</option>
           {paymentTypeOptions.map((paymentType) => (
             <option key={paymentType} value={paymentType}>{paymentType}</option>
@@ -60,8 +76,12 @@ export default function NewTransactionForm() {
           id='payment_date'
           name='payment_date'
           type='date'
+          min={today}
           value={paymentDate}
-          onChange={(event) => setPaymentDate(event.target.value)}
+          onChange={(event) => {
+            const selectedDate = event.target.value
+            setPaymentDate(selectedDate && selectedDate < today ? today : selectedDate)
+          }}
           required
         />
       </div>
@@ -82,7 +102,14 @@ export default function NewTransactionForm() {
             required
             placeholder='0.00'
             onKeyDown={preventNegativeAmount}
-            onChange={clampAmountToZero}
+            onChange={(event) => {
+              clampAmountToZero(event)
+              const nextAmount = event.currentTarget.value
+              setAmount(nextAmount)
+              if (paymentType !== 'GCash Load') {
+                setCharge(calculatePaymentCharge(paymentType, Number(nextAmount)).toFixed(2))
+              }
+            }}
           />
         </div>
       </div>
@@ -97,11 +124,16 @@ export default function NewTransactionForm() {
             min='0'
             step='0.01'
             required
-            defaultValue='0'
+            value={charge}
             onKeyDown={preventNegativeAmount}
-            onChange={clampAmountToZero}
+            onChange={(event) => {
+              clampAmountToZero(event)
+              setCharge(event.currentTarget.value)
+            }}
+            aria-describedby='charge-calculation'
           />
         </div>
+        <span id='charge-calculation' className='field-hint'>Auto-calculated from payment type and amount; you can adjust it.</span>
       </div>
       <div className='form-field'>
         <label htmlFor='tran_id'>Transaction ID{transactionIdRequired && <span aria-hidden='true'> *</span>}</label>
