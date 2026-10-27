@@ -1,0 +1,13 @@
+node_modules
+
+# Next.js build output
+.next/
+/out/
+/build/
+/dist/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
