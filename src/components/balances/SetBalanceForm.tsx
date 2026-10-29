@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useActionState } from 'react'
+import { useActionState, useCallback, useEffect, useRef } from 'react'
 import { saveBalance, type SaveBalanceState } from '@/app/balances/new/actions'
 
 const initialState: SaveBalanceState = {}
@@ -20,17 +20,24 @@ function getTodayInPaymentTimeZone() {
 export default function SetBalanceForm({
   onActionChange,
 }: {
-  onActionChange: (action: () => void, pending: boolean) => void
+  onActionChange: (submit: () => void, pending: boolean) => void
 }) {
   const [state, action, pending] = useActionState(saveBalance, initialState)
+  const formRef = useRef<HTMLFormElement>(null)
+  const submitForm = useCallback(() => formRef.current?.requestSubmit(), [])
   const today = getTodayInPaymentTimeZone()
 
   useEffect(() => {
-    onActionChange(action, pending)
+    onActionChange(submitForm, pending)
   }, [action, pending, onActionChange])
 
   return (
-    <form className='new-transaction-form' id='balance-form' action={action}>
+    <form
+      ref={formRef}
+      className='new-transaction-form'
+      id='balance-form'
+      action={action}
+    >
       <div className='form-field'>
         <label htmlFor='balance-type'>Balance type <span aria-hidden='true'>*</span></label>
         <input
