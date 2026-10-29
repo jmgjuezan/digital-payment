@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { ArrowLeft, Plus, WalletCards } from 'lucide-react'
+import { LogOut, WalletCards } from 'lucide-react'
 import BalanceRecords, { type Balance } from '@/components/balances/BalanceRecords'
+import AppActionFooter from '@/components/layout/AppActionFooter'
 
 const timeZone = 'Asia/Manila'
 
@@ -68,23 +68,17 @@ export default async function BalancesPage({
     .lte('date', today)
 
   return (
-    <main className='dashboard-shell'>
+    <main className='dashboard-shell has-action-footer'>
       <header className='dashboard-header'>
         <a className='dashboard-brand' href='/dashboard' aria-label='Digital Payment dashboard'>
           <span className='dashboard-brand-mark' aria-hidden='true'>↗</span>
           <span>Digital Payment</span>
         </a>
         <div className='dashboard-header-actions'>
-          <Link className='transaction-back-link' href='/dashboard'>
-            <ArrowLeft size={16} aria-hidden='true' />
-            <span>Transactions</span>
-          </Link>
-          <Link className='add-transaction-button' href='/balances/new'>
-            <Plus size={16} aria-hidden='true' />
-            <span>Set balance</span>
-          </Link>
+          {user.email && <span className='dashboard-user-email' title={user.email}>{user.email}</span>}
           <form action='/auth/signout' method='post'>
             <button className='dashboard-logout' type='submit'>
+              <LogOut size={15} aria-hidden='true' />
               <span>Log out</span>
             </button>
           </form>
@@ -108,8 +102,10 @@ export default async function BalancesPage({
           payments={paymentData ?? []}
           hasError={Boolean(error)}
           hasPaymentError={Boolean(paymentError)}
+          selectedDate={selectedDate}
         />
       </section>
+      <AppActionFooter current='balances' />
     </main>
   )
 }

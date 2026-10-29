@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useEffect, useActionState } from 'react'
 import { saveBalance, type SaveBalanceState } from '@/app/balances/new/actions'
 
 const initialState: SaveBalanceState = {}
@@ -17,12 +17,20 @@ function getTodayInPaymentTimeZone() {
   return `${values.year}-${values.month}-${values.day}`
 }
 
-export default function SetBalanceForm() {
+export default function SetBalanceForm({
+  onActionChange,
+}: {
+  onActionChange: (action: () => void, pending: boolean) => void
+}) {
   const [state, action, pending] = useActionState(saveBalance, initialState)
   const today = getTodayInPaymentTimeZone()
 
+  useEffect(() => {
+    onActionChange(action, pending)
+  }, [action, pending, onActionChange])
+
   return (
-    <form className='new-transaction-form' action={action}>
+    <form className='new-transaction-form' id='balance-form' action={action}>
       <div className='form-field'>
         <label htmlFor='balance-type'>Balance type <span aria-hidden='true'>*</span></label>
         <input
@@ -57,18 +65,11 @@ export default function SetBalanceForm() {
         <label htmlFor='balance-amount'>Amount <span aria-hidden='true'>*</span></label>
         <div className='input-with-prefix'>
           <span aria-hidden='true'>₱</span>
-          <input id='balance-amount' name='amount' type='number' min='0' step='0.01' required defaultValue='0' />
+          <input id='balance-amount' name='amount' type='number' min='0' step='0.01' required placeholder='0.00' />
         </div>
       </div>
 
       {state.error && <p className='transaction-form-error' role='alert'>{state.error}</p>}
-
-      <div className='transaction-form-actions'>
-        <a href='/balances'>Cancel</a>
-        <button className='add-transaction-button' type='submit' disabled={pending}>
-          {pending ? 'Saving…' : 'Save balance'}
-        </button>
-      </div>
     </form>
   )
 }

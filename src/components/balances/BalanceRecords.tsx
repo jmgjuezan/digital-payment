@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { LayoutGrid, List, WalletCards } from 'lucide-react'
 
 export type Balance = {
   id: number
@@ -24,6 +25,8 @@ type BalanceWithActivity = Balance & {
   computedAmount: number
 }
 
+type ViewMode = 'table' | 'cards'
+
 const currency = new Intl.NumberFormat('en-PH', {
   style: 'currency',
   currency: 'PHP',
@@ -35,13 +38,16 @@ export default function BalanceRecords({
   payments,
   hasError,
   hasPaymentError,
+  selectedDate,
 }: {
   balances: Balance[]
   payments: BalancePayment[]
   hasError: boolean
   hasPaymentError: boolean
+  selectedDate: string
 }) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const balancesWithActivity = useMemo<BalanceWithActivity[]>(() => balances.map((balance) => {
     const matchingPayments = payments.filter((payment) => payment.device === balance.device
       && payment.type.toLowerCase().startsWith(balance.type.toLowerCase())
@@ -114,67 +120,146 @@ export default function BalanceRecords({
             <strong>No balances to calculate</strong>
             <span>Set a balance to see the computed amount.</span>
           </div>
-        ) : <div className='transactions-table-scroll'>
+        ) : viewMode === 'table' ? (
+          <div className='transactions-table-scroll'>
+            <table className='transactions-table'>
+              <thead>
+                <tr>
+                  <th scope='col'>Type</th>
+                  <th scope='col'>Device</th>
+                  <th scope='col'>Starting balance</th>
+                  <th scope='col'>Cash-in and load</th>
+                  <th scope='col'>Cash-out</th>
+                  <th scope='col'>Computed balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedBalances.map((balance) => (
+                  <tr key={`computed-${balance.id}`}>
+                    <td>{balance.type}</td>
+                    <td>{balance.device}</td>
+                    <td>{currency.format(Number(balance.amount))}</td>
+                    <td>{currency.format(balance.cashIn)}</td>
+                    <td>{currency.format(balance.cashOut)}</td>
+                    <td className='amount-cell'>{currency.format(balance.computedAmount)}</td>
+                  </tr>
+                ))}
+                <tr className='computed-balance-total-row'>
+                  <th scope='row' colSpan={5}>Total computed balance</th>
+                  <td>{currency.format(totalComputedBalance)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className='transactions-card-grid'>
+            {sortedBalances.map((balance) => (
+              <article className='transaction-card' key={`computed-${balance.id}`}>
+                <div className='transaction-card-top'>
+                  <div>
+                    <span className='transaction-type'>{balance.type}</span>
+                    <span className='transaction-device'>{balance.device}</span>
+                  </div>
+                  <strong className='transaction-amount'>{currency.format(balance.computedAmount)}</strong>
+                </div>
+                <dl className='transaction-details'>
+                  <div className='transaction-detail'>
+                    <dt>Starting balance</dt>
+                    <dd>{currency.format(Number(balance.amount))}</dd>
+                  </div>
+                  <div className='transaction-detail'>
+                    <dt>Cash-in and load</dt>
+                    <dd>{currency.format(balance.cashIn)}</dd>
+                  </div>
+                  <div className='transaction-detail'>
+                    <dt>Cash-out</dt>
+                    <dd>{currency.format(balance.cashOut)}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+            <div className='transaction-card computed-balance-total-card'>
+              <strong>Total computed balance</strong>
+              <strong className='transaction-amount'>{currency.format(totalComputedBalance)}</strong>
+            </div>
+          </div>
+        )}
+      </section>
+      <div className='balances-toolbar'>
+        <div className='transaction-toolbar-title'>
+          <WalletCards size={18} aria-hidden='true' />
+          <h2>Balance records</h2>
+        </div>
+        <div className='transaction-controls'>
+          <form className='dashboard-date-filter' action='/balances' method='get'>
+            <label htmlFor='balances-date'>Date</label>
+            <input id='balances-date' type='date' name='date' value={selectedDate} onChange={(event) => event.currentTarget.form?.requestSubmit()} />
+          </form>
+          <label className='sort-control'>
+            <span>Sort by type and device</span>
+            <select value={sortDirection} onChange={(event) => setSortDirection(event.target.value as 'asc' | 'desc')}>
+              <option value='asc'>A to Z</option>
+              <option value='desc'>Z to A</option>
+            </select>
+          </label>
+          <div className='view-toggle' role='group' aria-label='Balance display mode'>
+            <button
+              type='button'
+              className={viewMode === 'table' ? 'view-toggle-button is-active' : 'view-toggle-button'}
+              aria-label='Table view'
+              aria-pressed={viewMode === 'table'}
+              onClick={() => setViewMode('table')}
+            >
+              <List size={17} />
+            </button>
+            <button
+              type='button'
+              className={viewMode === 'cards' ? 'view-toggle-button is-active' : 'view-toggle-button'}
+              aria-label='Card view'
+              aria-pressed={viewMode === 'cards'}
+              onClick={() => setViewMode('cards')}
+            >
+              <LayoutGrid size={17} />
+            </button>
+          </div>
+        </div>
+      </div>
+      {viewMode === 'table' ? (
+        <div className='transactions-table-scroll'>
           <table className='transactions-table'>
             <thead>
               <tr>
-                <th scope='col'>Type</th>
                 <th scope='col'>Device</th>
-                <th scope='col'>Starting balance</th>
-                <th scope='col'>Cash-in and load</th>
-                <th scope='col'>Cash-out</th>
-                <th scope='col'>Computed balance</th>
+                <th scope='col'>Balance type</th>
+                <th scope='col'>Amount</th>
               </tr>
             </thead>
             <tbody>
               {sortedBalances.map((balance) => (
-                <tr key={`computed-${balance.id}`}>
-                  <td>{balance.type}</td>
+                <tr key={balance.id}>
                   <td>{balance.device}</td>
-                  <td>{currency.format(Number(balance.amount))}</td>
-                  <td>{currency.format(balance.cashIn)}</td>
-                  <td>{currency.format(balance.cashOut)}</td>
-                  <td className='amount-cell'>{currency.format(balance.computedAmount)}</td>
+                  <td>{balance.type}</td>
+                  <td className='amount-cell'>{currency.format(Number(balance.amount))}</td>
                 </tr>
               ))}
-              <tr className='computed-balance-total-row'>
-                <th scope='row' colSpan={5}>Total computed balance</th>
-                <td>{currency.format(totalComputedBalance)}</td>
-              </tr>
             </tbody>
           </table>
-        </div>}
-      </section>
-      <div className='balances-toolbar'>
-        <h2>Balance records</h2>
-        <label className='sort-control'>
-          <span>Sort by type and device</span>
-          <select value={sortDirection} onChange={(event) => setSortDirection(event.target.value as 'asc' | 'desc')}>
-            <option value='asc'>A to Z</option>
-            <option value='desc'>Z to A</option>
-          </select>
-        </label>
-      </div>
-      <div className='transactions-table-scroll'>
-        <table className='transactions-table'>
-          <thead>
-            <tr>
-              <th scope='col'>Device</th>
-              <th scope='col'>Balance type</th>
-              <th scope='col'>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedBalances.map((balance) => (
-              <tr key={balance.id}>
-                <td>{balance.device}</td>
-                <td>{balance.type}</td>
-                <td className='amount-cell'>{currency.format(Number(balance.amount))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        </div>
+      ) : (
+        <div className='transactions-card-grid'>
+          {sortedBalances.map((balance) => (
+            <article className='transaction-card' key={balance.id}>
+              <div className='transaction-card-top'>
+                <div>
+                  <span className='transaction-type'>{balance.type}</span>
+                  <span className='transaction-device'>{balance.device}</span>
+                </div>
+                <strong className='transaction-amount'>{currency.format(Number(balance.amount))}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </>
   )
 }

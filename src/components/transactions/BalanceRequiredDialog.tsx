@@ -34,15 +34,15 @@ export default function BalanceRequiredDialog({
     >
       <div className='balance-required-content'>
         <span className='new-transaction-icon'><WalletCards size={20} aria-hidden='true' /></span>
-        <h2 id='balance-required-title'>Set today&apos;s balance first</h2>
+        <h2 id='balance-required-title'>Add today&apos;s balance first</h2>
         <p>
           {hasError
-            ? 'Today’s balance could not be verified. Set the balance before adding a transaction.'
-            : 'A balance must be set today before adding a transaction.'}
+            ? 'Today’s balance could not be verified. Add the balance before adding a transaction.'
+            : 'A balance must be added today before adding a transaction.'}
         </p>
         <div className='balance-required-actions'>
           <Link className='add-transaction-button' href='/balances/new'>
-            Set balance
+            Add balance
           </Link>
           <button
             className='balance-cancel-button'

@@ -25,7 +25,7 @@ export default function NewTransactionForm() {
   const [paymentType, setPaymentType] = useState('')
   const [paymentDate, setPaymentDate] = useState(getTodayInPaymentTimeZone)
   const [amount, setAmount] = useState('')
-  const [charge, setCharge] = useState('0.00')
+  const [charge, setCharge] = useState('')
   const transactionIdRequired = paymentType.endsWith('Cash-out')
   const today = getTodayInPaymentTimeZone()
 
@@ -38,7 +38,8 @@ export default function NewTransactionForm() {
   }
 
   return (
-    <form className='new-transaction-form' action={action}>
+    <>
+    <form id='new-transaction-form' className='new-transaction-form' action={action}>
       <div className='form-field'>
         <label htmlFor='type'>Payment type <span aria-hidden='true'>*</span></label>
         <select
@@ -49,8 +50,11 @@ export default function NewTransactionForm() {
           onChange={(event) => {
             const nextType = event.target.value
             setPaymentType(nextType)
-            if (nextType !== 'GCash Load') {
-              setCharge(calculatePaymentCharge(nextType, Number(amount)).toFixed(2))
+            if (!nextType || nextType === 'GCash Load' || !amount) {
+              setCharge('')
+            } else {
+              const calculatedCharge = calculatePaymentCharge(nextType, Number(amount))
+              setCharge(calculatedCharge > 0 ? calculatedCharge.toFixed(2) : '')
             }
           }}
         >
@@ -106,12 +110,16 @@ export default function NewTransactionForm() {
               clampAmountToZero(event)
               const nextAmount = event.currentTarget.value
               setAmount(nextAmount)
-              if (paymentType !== 'GCash Load') {
-                setCharge(calculatePaymentCharge(paymentType, Number(nextAmount)).toFixed(2))
+              if (!nextAmount) {
+                setCharge('')
+              } else if (paymentType && paymentType !== 'GCash Load') {
+                const calculatedCharge = calculatePaymentCharge(paymentType, Number(nextAmount))
+                setCharge(calculatedCharge > 0 ? calculatedCharge.toFixed(2) : '')
               }
             }}
           />
         </div>
+        <span className='field-hint'>The actual amount in the GCash, Maya, or banking app</span>
       </div>
       <div className='form-field'>
         <label htmlFor='charge'>Charge <span aria-hidden='true'>*</span></label>
@@ -125,6 +133,7 @@ export default function NewTransactionForm() {
             step='0.01'
             required
             value={charge}
+            placeholder='0.00'
             onKeyDown={preventNegativeAmount}
             onChange={(event) => {
               clampAmountToZero(event)
@@ -151,13 +160,20 @@ export default function NewTransactionForm() {
       </div>
 
       {state.error && <p className='transaction-form-error' role='alert'>{state.error}</p>}
-
-      <div className='transaction-form-actions'>
-        <a href='/dashboard'>Cancel</a>
-        <button className='add-transaction-button' type='submit' disabled={pending}>
+    </form>
+    <div className='app-action-footer'>
+      <div className='app-action-footer-inner'>
+        <a className='set-balance-button' href='/dashboard'>Cancel</a>
+        <button
+          className='add-transaction-button'
+          type='submit'
+          form='new-transaction-form'
+          disabled={pending}
+        >
           {pending ? 'Saving…' : 'Save transaction'}
         </button>
       </div>
-    </form>
+    </div>
+    </>
   )
 }

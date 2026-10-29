@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { ArrowLeft, ReceiptText } from 'lucide-react'
+import { LogOut, ReceiptText } from 'lucide-react'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -55,16 +54,21 @@ export default async function NewTransactionPage() {
   const requiresBalance = Boolean(error) || !count
 
   return (
-    <main className='dashboard-shell'>
+    <main className='dashboard-shell has-action-footer'>
       <header className='dashboard-header'>
         <a className='dashboard-brand' href='/dashboard' aria-label='Digital Payment dashboard'>
           <span className='dashboard-brand-mark' aria-hidden='true'>↗</span>
           <span>Digital Payment</span>
         </a>
-        <Link className='transaction-back-link' href='/dashboard'>
-          <ArrowLeft size={16} aria-hidden='true' />
-          <span>Back to dashboard</span>
-        </Link>
+        <div className='dashboard-header-actions'>
+          {user.email && <span className='dashboard-user-email' title={user.email}>{user.email}</span>}
+          <form action='/auth/signout' method='post'>
+            <button className='dashboard-logout' type='submit'>
+              <LogOut size={15} aria-hidden='true' />
+              <span>Log out</span>
+            </button>
+          </form>
+        </div>
       </header>
 
       <section className='new-transaction-content' aria-labelledby='new-transaction-title'>

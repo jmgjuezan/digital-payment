@@ -1,10 +1,8 @@
 'use client'
 
-import { useMemo, useRef, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowDown, ArrowUp, CalendarDays, LayoutGrid, List, LogOut, Plus, ReceiptText, X } from 'lucide-react'
-import { checkTodayBalance } from '@/app/dashboard/actions'
-import BalanceRequiredDialog from '@/components/transactions/BalanceRequiredDialog'
+import { useMemo, useRef, useState } from 'react'
+import { ArrowDown, ArrowUp, CalendarDays, LayoutGrid, List, LogOut, ReceiptText, X } from 'lucide-react'
+import AppActionFooter from '@/components/layout/AppActionFooter'
 
 export type Payment = {
   id: number
@@ -113,24 +111,7 @@ export default function DashboardTransactions({
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const [isCheckingBalance, startBalanceCheck] = useTransition()
-  const [showBalanceRequired, setShowBalanceRequired] = useState(false)
-  const [balanceCheckError, setBalanceCheckError] = useState(false)
-  const router = useRouter()
   const summaryDialogRef = useRef<HTMLDialogElement>(null)
-
-  function handleAddTransaction() {
-    startBalanceCheck(async () => {
-      const result = await checkTodayBalance()
-      if (result.hasBalance) {
-        router.push('/transactions/new')
-        return
-      }
-
-      setBalanceCheckError(result.hasError)
-      setShowBalanceRequired(true)
-    })
-  }
 
   const sortedTransactions = useMemo(
     () => [...transactions].sort((first, second) => comparePayments(first, second, sortField, sortDirection)),
@@ -153,20 +134,21 @@ export default function DashboardTransactions({
 
     return [...totals.entries()].sort(([first], [second]) => first.localeCompare(second))
   }, [transactions])
+  const consolidatedCashInLoad = transactions
+    .filter((payment) => /cash-in|load/i.test(payment.type))
+    .reduce((total, payment) => total + Number(payment.amount || 0), 0)
+  const consolidatedCashOut = transactions
+    .filter((payment) => /cash-out/i.test(payment.type))
+    .reduce((total, payment) => total + Number(payment.amount || 0), 0)
 
   return (
-    <main className='dashboard-shell'>
+    <main className='dashboard-shell has-action-footer'>
       <header className='dashboard-header'>
         <a className='dashboard-brand' href='/dashboard' aria-label='Digital Payment dashboard'>
           <span className='dashboard-brand-mark' aria-hidden='true'>↗</span>
           <span>Digital Payment</span>
         </a>
         <div className='dashboard-header-actions'>
-          <button className='add-transaction-button' type='button' onClick={handleAddTransaction} disabled={isCheckingBalance}>
-            <Plus size={16} aria-hidden='true' />
-            <span>{isCheckingBalance ? 'Checking…' : 'Add transaction'}</span>
-          </button>
-          <a className='set-balance-button' href='/balances'>Balances</a>
           {userEmail && <span className='dashboard-user-email' title={userEmail}>{userEmail}</span>}
           <form action='/auth/signout' method='post'>
             <button className='dashboard-logout' type='submit'>
@@ -176,12 +158,6 @@ export default function DashboardTransactions({
           </form>
         </div>
       </header>
-
-      <BalanceRequiredDialog
-        open={showBalanceRequired}
-        hasError={balanceCheckError}
-        onClose={() => setShowBalanceRequired(false)}
-      />
 
       <section className='dashboard-content' aria-labelledby='dashboard-title'>
         <div className='dashboard-heading-row'>
@@ -265,6 +241,16 @@ export default function DashboardTransactions({
             <div className='type-summary-footer-totals'>
               <span>Amount <strong>{currency.format(totalAmount)}</strong></span>
               <span>Charges <strong>{currency.format(totalCharges)}</strong></span>
+            </div>
+            <div className='type-summary-consolidated'>
+              <div>
+                <span>Cash-in and load</span>
+                <strong>{currency.format(consolidatedCashInLoad)}</strong>
+              </div>
+              <div>
+                <span>Cash-out</span>
+                <strong>{currency.format(consolidatedCashOut)}</strong>
+              </div>
             </div>
           </div>
         </dialog>
@@ -372,6 +358,7 @@ export default function DashboardTransactions({
           </div>
         )}
       </section>
+      <AppActionFooter current='transactions' />
     </main>
   )
 }
