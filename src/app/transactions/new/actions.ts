@@ -37,7 +37,7 @@ export async function createPayment(_previousState: CreatePaymentState, formData
   if (!paymentTime) return { error: 'Enter the payment time.' }
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Amount must be greater than zero.' }
 
-  if (type.endsWith('Cash-out') && !tranId) return { error: 'Transaction ID is required for cash-out payments.' }
+  if (type && !type.endsWith('Load') && !tranId) return { error: 'Transaction ID is required for this payment type.' }
 
   if (!paymentTypeOptions.includes(type as (typeof paymentTypeOptions)[number]) || !validDevices.includes(device) || !Number.isFinite(amount) || !Number.isFinite(charge) || amount < 0 || charge < 0) {
     return { error: 'Enter a payment type, device, and valid non-negative amount and charge.' }

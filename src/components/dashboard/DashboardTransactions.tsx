@@ -25,17 +25,21 @@ const paymentFields: { value: SortField; label: string }[] = [
   { value: 'payment_date', label: 'Payment date' },
   { value: 'date', label: 'Payment time' },
   { value: 'type', label: 'Type' },
-  { value: 'tran_id', label: 'Transaction ID' },
-  { value: 'charge', label: 'Charge' },
-  { value: 'amount', label: 'Amount' },
   { value: 'device', label: 'Device' },
-  { value: 'created_at', label: 'Created date' },
+  { value: 'amount', label: 'Amount' },
+  { value: 'charge', label: 'Charge' },
+  { value: 'tran_id', label: 'Transaction ID' },
+  { value: 'created_at', label: 'Created date/time' },
   { value: 'note', label: 'Note' },
 ]
 
 const sortFields = paymentFields.filter(
   (field) => field.value !== 'note',
 )
+const cardFieldOrder: SortField[] = ['payment_date', 'date', 'amount', 'charge', 'device', 'tran_id', 'created_at', 'note']
+const cardFields = paymentFields
+  .filter((field) => field.value !== 'type')
+  .sort((first, second) => cardFieldOrder.indexOf(first.value) - cardFieldOrder.indexOf(second.value))
 
 const currency = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -54,6 +58,9 @@ function displayValue(field: SortField, payment: Payment, timeZone: string) {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
     }).format(new Date(String(value)))
   }
   if (field === 'date') {
@@ -343,10 +350,9 @@ export default function DashboardTransactions({
                   <div>
                     <span className='transaction-type'>{payment.type || 'Payment'}</span>
                   </div>
-                  <strong className='transaction-amount'>{currency.format(Number(payment.amount || 0))}</strong>
                 </div>
                 <dl className='transaction-details'>
-                  {paymentFields.filter((field) => field.value !== 'type' && field.value !== 'amount').map((field) => (
+                  {cardFields.map((field) => (
                     <div className='transaction-detail' key={field.value}>
                       <dt>{field.label}</dt>
                       <dd>{displayValue(field.value, payment, timeZone)}</dd>
@@ -358,7 +364,7 @@ export default function DashboardTransactions({
           </div>
         )}
       </section>
-      <AppActionFooter current='transactions' />
+      <AppActionFooter current='transactions' userKey={userEmail} />
     </main>
   )
 }

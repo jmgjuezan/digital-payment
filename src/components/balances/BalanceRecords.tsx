@@ -75,7 +75,6 @@ export default function BalanceRecords({
     })
   }, [balancesWithActivity, sortDirection])
   const totalBalance = balances.reduce((sum, balance) => sum + Number(balance.amount || 0), 0)
-  const totalComputedBalance = balancesWithActivity.reduce((sum, balance) => sum + balance.computedAmount, 0)
 
   if (hasError) {
     return (
@@ -110,7 +109,6 @@ export default function BalanceRecords({
             <h2 id='computed-balances-title'>Computed balances</h2>
             <p>Starting balance minus cash-ins and loads, plus cash-outs, through today.</p>
           </div>
-          <strong className='computed-balance-total'>{currency.format(totalComputedBalance)}</strong>
         </div>
         {hasPaymentError && (
           <p className='computed-balance-warning' role='status'>Payment activity could not be loaded, so computed balances may be incomplete.</p>
@@ -125,29 +123,25 @@ export default function BalanceRecords({
             <table className='transactions-table'>
               <thead>
                 <tr>
-                  <th scope='col'>Type</th>
-                  <th scope='col'>Device</th>
                   <th scope='col'>Starting balance</th>
                   <th scope='col'>Cash-in and load</th>
                   <th scope='col'>Cash-out</th>
+                  <th scope='col'>Type</th>
+                  <th scope='col'>Device</th>
                   <th scope='col'>Computed balance</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedBalances.map((balance) => (
                   <tr key={`computed-${balance.id}`}>
-                    <td>{balance.type}</td>
-                    <td>{balance.device}</td>
                     <td>{currency.format(Number(balance.amount))}</td>
                     <td>{currency.format(balance.cashIn)}</td>
                     <td>{currency.format(balance.cashOut)}</td>
+                    <td>{balance.type}</td>
+                    <td>{balance.device}</td>
                     <td className='amount-cell'>{currency.format(balance.computedAmount)}</td>
                   </tr>
                 ))}
-                <tr className='computed-balance-total-row'>
-                  <th scope='row' colSpan={5}>Total computed balance</th>
-                  <td>{currency.format(totalComputedBalance)}</td>
-                </tr>
               </tbody>
             </table>
           </div>
@@ -178,10 +172,6 @@ export default function BalanceRecords({
                 </dl>
               </article>
             ))}
-            <div className='transaction-card computed-balance-total-card'>
-              <strong>Total computed balance</strong>
-              <strong className='transaction-amount'>{currency.format(totalComputedBalance)}</strong>
-            </div>
           </div>
         )}
       </section>

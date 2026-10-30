@@ -26,7 +26,7 @@ export default function NewTransactionForm() {
   const [paymentDate, setPaymentDate] = useState(getTodayInPaymentTimeZone)
   const [amount, setAmount] = useState('')
   const [charge, setCharge] = useState('')
-  const transactionIdRequired = paymentType.endsWith('Cash-out')
+  const transactionIdRequired = Boolean(paymentType) && !paymentType.endsWith('Load')
   const today = getTodayInPaymentTimeZone()
 
   function preventNegativeAmount(event: React.KeyboardEvent<HTMLInputElement>) {

@@ -200,7 +200,7 @@ button, a, input { font: inherit; }
 .dashboard-brand { display: inline-flex; align-items: center; gap: 10px; color: #183d30; font-size: 15px; font-weight: 700; text-decoration: none; }
 .dashboard-brand-mark { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 8px; background: #e1f0e6; color: #1f6b4e; font-size: 18px; }
 .dashboard-header-actions { display: flex; align-items: center; gap: 20px; }
-.dashboard-user-email { max-width: 230px; overflow: hidden; color: #405449; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-user-email { max-width: min(42vw, 420px); color: #405449; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
 .dashboard-logout { display: inline-flex; height: 35px; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; border: 1px solid #dce4dc; border-radius: 6px; background: #fff; color: #405449; cursor: pointer; font-size: 12px; }
 .dashboard-logout:hover { border-color: #9cb9a5; background: #f7faf7; color: #1f6b4e; }
 .dashboard-logout:focus-visible { outline: 2px solid #1f6b4e; outline-offset: 2px; }
@@ -354,10 +354,12 @@ button, a, input { font: inherit; }
 }
 
 @media (max-width: 620px) {
-  .dashboard-header { height: 58px; padding: 0 18px; }
-  .dashboard-header-actions { gap: 10px; }
+  .dashboard-header { min-height: 58px; height: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'brand actions' 'email email'; row-gap: 6px; padding: 8px 18px; }
+  .dashboard-brand { grid-area: brand; }
+  .dashboard-header-actions { display: contents; }
+  .dashboard-header-actions form { grid-area: actions; }
+  .dashboard-header-actions .dashboard-user-email { grid-area: email; max-width: none; }
   .dashboard-header-actions .add-transaction-button { min-height: 44px; padding: 0 12px; }
-  .dashboard-user-email { max-width: 120px; }
   .dashboard-logout { width: 35px; padding: 0; }
   .dashboard-logout span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .dashboard-content { width: calc(100% - 36px); padding: 31px 0 24px; }
