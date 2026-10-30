@@ -13,14 +13,15 @@ As a user, I want to [action] so that I can [benefit/outcome].
 - Component structural rules:
   - Accessible via keyboard navigation.
   - Fully responsive from mobile width (320px) to desktop (1440px).
+  - Always consider doing async calls for data and show only skeletons on UI while waiting for data to be fetched.
 
 ## 4. Technical Constraints & Edge Cases
 - **Error Handling**: Gracefully intercept network failures and display a user-friendly toast message.
-- **Performance**: Ensure UI loading states (skeletons or spinners) are shown during asynchronous calls.
+- **Performance**: Always use asynchronous calls for data fetching and show only skeletons on UI while waiting for the data to be fetched (no spinners or blank loading screens).
 - **Permissions**: Only authenticated users with the `admin` role can access this route.
 
 ## 5. Definition of Done Checklist
 - [ ] Feature fully operational locally.
 - [ ] All TypeScript errors resolved (`npm lint` passes cleanly).
-- [ ] Unit tests cover critical success and failure branches.
+- [ ] Unit tests cover critical success and failure branches (see [TESTING.md](TESTING.md)).
 - [ ] No unhandled edge cases or placeholder comments remaining in code.

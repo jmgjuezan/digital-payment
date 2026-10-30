@@ -21,6 +21,12 @@ function getTodayInPaymentTimeZone() {
   return `${values.year}-${values.month}-${values.day}`
 }
 
+function getYesterdayInPaymentTimeZone() {
+  const yesterday = new Date(`${getTodayInPaymentTimeZone()}T00:00:00Z`)
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+  return yesterday.toISOString().slice(0, 10)
+}
+
 export async function createPayment(_previousState: CreatePaymentState, formData: FormData): Promise<CreatePaymentState> {
   const type = String(formData.get('type') ?? '').trim()
   const tranId = String(formData.get('tran_id') ?? '').trim()
@@ -33,7 +39,9 @@ export async function createPayment(_previousState: CreatePaymentState, formData
   const validDevices = [...Array.from({ length: 8 }, (_, index) => `CP${index + 1}`), 'ME']
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) return { error: 'Enter a valid payment date.' }
-  if (paymentDate < getTodayInPaymentTimeZone()) return { error: 'Payment date cannot be in the past.' }
+  if (paymentDate < getYesterdayInPaymentTimeZone() || paymentDate > getTodayInPaymentTimeZone()) {
+    return { error: 'Payment date must be yesterday or today.' }
+  }
   if (!paymentTime) return { error: 'Enter the payment time.' }
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Amount must be greater than zero.' }
 

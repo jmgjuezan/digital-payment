@@ -1,15 +1,51 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { LogOut, WalletCards } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import BalanceRecords, { type Balance } from '@/components/balances/BalanceRecords'
+import BalancesDashboardSkeleton from '@/components/balances/BalancesDashboardSkeleton'
 import AppActionFooter from '@/components/layout/AppActionFooter'
 
 const timeZone = 'Asia/Manila'
 
 export const metadata: Metadata = {
   title: 'Balances | Digital Payment',
+}
+
+type BalancePayment = {
+  type: string
+  device: string
+  amount: number
+  date: string
+}
+
+type BalancesPageData = {
+  balances: Balance[]
+  payments: BalancePayment[]
+  hasError: boolean
+  hasPaymentError: boolean
+}
+
+async function BalancesDashboardData({
+  dataPromise,
+  selectedDate,
+}: {
+  dataPromise: Promise<BalancesPageData>
+  selectedDate: string
+}) {
+  const { balances, payments, hasError, hasPaymentError } = await dataPromise
+
+  return (
+    <BalanceRecords
+      balances={balances}
+      payments={payments}
+      hasError={hasError}
+      hasPaymentError={hasPaymentError}
+      selectedDate={selectedDate}
+    />
+  )
 }
 
 function getTodayInPaymentTimeZone() {
@@ -54,18 +90,24 @@ export default async function BalancesPage({
 
   const { date: requestedDate } = await searchParams
   const today = getTodayInPaymentTimeZone()
-  const selectedDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : today
-  const { data, error } = await supabase
-    .from('balances')
-    .select('id, created_at, type, device, date, amount')
-    .eq('date', selectedDate)
-    .order('created_at', { ascending: false })
-
-  const { data: paymentData, error: paymentError } = await supabase
-    .from('payments')
-    .select('type, device, amount, date')
-    .gte('date', selectedDate)
-    .lte('date', today)
+  const selectedDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today ? requestedDate : today
+  const dataPromise = Promise.all([
+    supabase
+      .from('balances')
+      .select('id, created_at, type, device, date, amount')
+      .eq('date', selectedDate)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('payments')
+      .select('type, device, amount, date')
+      .gte('date', selectedDate)
+      .lte('date', today),
+  ]).then(([balanceResult, paymentResult]) => ({
+    balances: (balanceResult.data ?? []) as unknown as Balance[],
+    payments: (paymentResult.data ?? []) as unknown as BalancePayment[],
+    hasError: Boolean(balanceResult.error),
+    hasPaymentError: Boolean(paymentResult.error),
+  }))
 
   return (
     <main className='dashboard-shell has-action-footer'>
@@ -86,24 +128,9 @@ export default async function BalancesPage({
       </header>
 
       <section className='dashboard-content' aria-labelledby='balances-title'>
-        <div className='dashboard-heading-row'>
-          <div>
-            <p className='dashboard-eyebrow'>Account records</p>
-            <h1 id='balances-title'>Balances</h1>
-            <p className='dashboard-date'><WalletCards size={16} aria-hidden='true' />Balances recorded for {selectedDate}</p>
-          </div>
-          <div className='dashboard-count' aria-live='polite'>
-            <span>{data?.length ?? 0}</span>
-            <small>{data?.length === 1 ? 'balance' : 'balances'}</small>
-          </div>
-        </div>
-        <BalanceRecords
-          balances={(data ?? []) as Balance[]}
-          payments={paymentData ?? []}
-          hasError={Boolean(error)}
-          hasPaymentError={Boolean(paymentError)}
-          selectedDate={selectedDate}
-        />
+        <Suspense fallback={<BalancesDashboardSkeleton selectedDate={selectedDate} />}>
+          <BalancesDashboardData dataPromise={dataPromise} selectedDate={selectedDate} />
+        </Suspense>
       </section>
       <AppActionFooter current='balances' />
     </main>

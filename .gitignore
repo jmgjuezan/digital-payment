@@ -6,11 +6,20 @@ node_modules
 /build/
 /dist/
 *.tsbuildinfo
+/coverage/
+/test-results/
+/playwright-report/
+/supabase/.branches/
+/supabase/.temp/
 
 # Environment files
 .env
 .env.*
 !.env.example
+!.env.integration.example
+!.env.e2e.example
 .vercel
 .env*
 !.env.example
+!.env.integration.example
+!.env.e2e.example

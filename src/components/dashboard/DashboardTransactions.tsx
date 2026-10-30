@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, CalendarDays, LayoutGrid, List, LogOut, ReceiptText, X } from 'lucide-react'
+import { getTransactionsForDate } from '@/app/dashboard/actions'
 import AppActionFooter from '@/components/layout/AppActionFooter'
 
 export type Payment = {
@@ -46,6 +47,42 @@ const currency = new Intl.NumberFormat('en-PH', {
   currency: 'PHP',
   maximumFractionDigits: 2,
 })
+
+function TransactionsLoadingSkeleton({ viewMode }: { viewMode: ViewMode }) {
+  if (viewMode === 'cards') {
+    return (
+      <div className='transactions-card-grid transactions-loading-skeleton' role='status' aria-label='Loading transactions'>
+        {Array.from({ length: 6 }, (_, index) => (
+          <div className='transaction-card' key={index} aria-hidden='true'>
+            <span className='dashboard-skeleton-block transactions-loading-card-title' />
+            <div className='transactions-loading-card-details'>
+              {Array.from({ length: 6 }, (_, cell) => <span className='dashboard-skeleton-block' key={cell} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className='transactions-table-scroll transactions-loading-skeleton' role='status' aria-label='Loading transactions'>
+      <table className='transactions-table' aria-hidden='true'>
+        <thead>
+          <tr>{paymentFields.map((field) => <th key={field.value}>{field.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 6 }, (_, row) => (
+            <tr key={row}>
+              {paymentFields.map((field) => (
+                <td key={field.value}><span className='dashboard-skeleton-block transactions-loading-cell' /></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 function displayValue(field: SortField, payment: Payment, timeZone: string) {
   const value = payment[field]
@@ -102,11 +139,23 @@ function formatSelectedDate(date: string, timeZone: string) {
   }).format(new Date(Date.UTC(year, month - 1, day, 12)))
 }
 
+function getTodayInTimeZone(timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+
+  return `${values.year}-${values.month}-${values.day}`
+}
+
 export default function DashboardTransactions({
-  transactions,
-  hasError,
+  transactions: initialTransactions,
+  hasError: initialHasError,
   timeZone,
-  selectedDate,
+  selectedDate: initialSelectedDate,
   userEmail,
 }: {
   transactions: Payment[]
@@ -115,21 +164,67 @@ export default function DashboardTransactions({
   selectedDate: string
   userEmail: string
 }) {
+  const [transactions, setTransactions] = useState(initialTransactions)
+  const [hasError, setHasError] = useState(initialHasError)
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
+  const [isDateLoading, setIsDateLoading] = useState(false)
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [deviceFilter, setDeviceFilter] = useState('')
   const summaryDialogRef = useRef<HTMLDialogElement>(null)
+  const dateRequestId = useRef(0)
+  const today = getTodayInTimeZone(timeZone)
+
+  const paymentTypes = useMemo(
+    () => [...new Set(transactions.map((payment) => payment.type).filter(Boolean))].sort((first, second) => first.localeCompare(second)),
+    [transactions],
+  )
+  const devices = useMemo(
+    () => [...new Set(transactions.map((payment) => payment.device).filter(Boolean))].sort((first, second) => first.localeCompare(second, undefined, { numeric: true })),
+    [transactions],
+  )
+  const filteredTransactions = useMemo(
+    () => transactions.filter((payment) => (!typeFilter || payment.type === typeFilter) && (!deviceFilter || payment.device === deviceFilter)),
+    [transactions, typeFilter, deviceFilter],
+  )
+
+  async function handleDateChange(date: string) {
+    if (!date || date > today || date === selectedDate) return
+
+    setSelectedDate(date)
+    setIsDateLoading(true)
+    setHasError(false)
+    setTypeFilter('')
+    setDeviceFilter('')
+    summaryDialogRef.current?.close()
+    const requestId = ++dateRequestId.current
+    window.history.replaceState(null, '', `/dashboard?date=${encodeURIComponent(date)}`)
+
+    try {
+      const result = await getTransactionsForDate(date)
+      if (requestId !== dateRequestId.current) return
+
+      setTransactions(result.transactions as Payment[])
+      setHasError(result.hasError)
+    } catch {
+      if (requestId === dateRequestId.current) setHasError(true)
+    } finally {
+      if (requestId === dateRequestId.current) setIsDateLoading(false)
+    }
+  }
 
   const sortedTransactions = useMemo(
-    () => [...transactions].sort((first, second) => comparePayments(first, second, sortField, sortDirection)),
-    [transactions, sortField, sortDirection],
+    () => [...filteredTransactions].sort((first, second) => comparePayments(first, second, sortField, sortDirection)),
+    [filteredTransactions, sortField, sortDirection],
   )
-  const totalAmount = transactions.reduce((total, payment) => total + Number(payment.amount || 0), 0)
-  const totalCharges = transactions.reduce((total, payment) => total + Number(payment.charge || 0), 0)
+  const totalAmount = filteredTransactions.reduce((total, payment) => total + Number(payment.amount || 0), 0)
+  const totalCharges = filteredTransactions.reduce((total, payment) => total + Number(payment.charge || 0), 0)
   const totalsByType = useMemo(() => {
     const totals = new Map<string, { count: number; amount: number; charge: number }>()
 
-    for (const payment of transactions) {
+    for (const payment of filteredTransactions) {
       const type = payment.type || 'Unspecified'
       const current = totals.get(type) ?? { count: 0, amount: 0, charge: 0 }
       totals.set(type, {
@@ -140,13 +235,14 @@ export default function DashboardTransactions({
     }
 
     return [...totals.entries()].sort(([first], [second]) => first.localeCompare(second))
-  }, [transactions])
-  const consolidatedCashInLoad = transactions
+  }, [filteredTransactions])
+  const consolidatedCashInLoad = filteredTransactions
     .filter((payment) => /cash-in|load/i.test(payment.type))
     .reduce((total, payment) => total + Number(payment.amount || 0), 0)
-  const consolidatedCashOut = transactions
+  const consolidatedCashOut = filteredTransactions
     .filter((payment) => /cash-out/i.test(payment.type))
     .reduce((total, payment) => total + Number(payment.amount || 0), 0)
+  const consolidatedTotal = consolidatedCashInLoad + totalCharges - consolidatedCashOut
 
   return (
     <main className='dashboard-shell has-action-footer'>
@@ -174,27 +270,50 @@ export default function DashboardTransactions({
             <p className='dashboard-date'><CalendarDays size={16} aria-hidden='true' />{formatSelectedDate(selectedDate, timeZone)}</p>
           </div>
           <div className='dashboard-count' aria-live='polite'>
-            <span>{transactions.length}</span>
-            <small>{transactions.length === 1 ? 'transaction' : 'transactions'}</small>
+            {isDateLoading ? (
+              <span className='dashboard-skeleton-block transactions-loading-count' aria-label='Loading transaction count' />
+            ) : (
+              <>
+                <span>{filteredTransactions.length}</span>
+                <small>{filteredTransactions.length === 1 ? 'transaction' : 'transactions'}</small>
+              </>
+            )}
           </div>
         </div>
 
         <div className='dashboard-summary' aria-label='Today totals'>
-          <div className='summary-item'>
-            <span className='summary-label'>Total amount</span>
-            <strong>{currency.format(totalAmount)}</strong>
-          </div>
-          <div className='summary-divider' />
-          <div className='summary-item'>
-            <span className='summary-label'>Total charges</span>
-            <strong>{currency.format(totalCharges)}</strong>
-          </div>
-          <div className='summary-note'>Across payments on this date</div>
+          {isDateLoading ? (
+            <>
+              <div className='summary-item transactions-loading-summary-item'>
+                <span className='dashboard-skeleton-block' />
+                <span className='dashboard-skeleton-block' />
+              </div>
+              <div className='summary-divider' />
+              <div className='summary-item transactions-loading-summary-item'>
+                <span className='dashboard-skeleton-block' />
+                <span className='dashboard-skeleton-block' />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className='summary-item'>
+                <span className='summary-label'>Total amount</span>
+                <strong>{currency.format(totalAmount)}</strong>
+              </div>
+              <div className='summary-divider' />
+              <div className='summary-item'>
+                <span className='summary-label'>Total charges</span>
+                <strong>{currency.format(totalCharges)}</strong>
+              </div>
+              <div className='summary-note'>Across payments on this date</div>
+            </>
+          )}
         </div>
 
         <button
           className='type-summary-toggle'
           type='button'
+          disabled={isDateLoading}
           onClick={() => summaryDialogRef.current?.showModal()}
         >
           <ReceiptText size={16} aria-hidden='true' />
@@ -244,7 +363,7 @@ export default function DashboardTransactions({
             </div>
           )}
           <div className='type-summary-dialog-footer'>
-            <span>{transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}</span>
+            <span>{filteredTransactions.length} {filteredTransactions.length === 1 ? 'transaction' : 'transactions'}</span>
             <div className='type-summary-footer-totals'>
               <span>Amount <strong>{currency.format(totalAmount)}</strong></span>
               <span>Charges <strong>{currency.format(totalCharges)}</strong></span>
@@ -259,6 +378,16 @@ export default function DashboardTransactions({
                 <strong>{currency.format(consolidatedCashOut)}</strong>
               </div>
             </div>
+            <div className='type-summary-total' role='group' aria-label='Summary total'>
+              <div>
+                <span>Total</span>
+                <strong>{currency.format(consolidatedTotal)}</strong>
+              </div>
+              <p>Formula: Cash-in and load + charges − cash-out</p>
+              <small>
+                {currency.format(consolidatedCashInLoad)} + {currency.format(totalCharges)} − {currency.format(consolidatedCashOut)}
+              </small>
+            </div>
           </div>
         </dialog>
 
@@ -268,10 +397,24 @@ export default function DashboardTransactions({
             <h2>Payment records</h2>
           </div>
           <div className='transaction-controls'>
-            <form className='dashboard-date-filter' action='/dashboard' method='get'>
+            <div className='dashboard-date-filter'>
               <label htmlFor='dashboard-date'>Date</label>
-              <input id='dashboard-date' type='date' name='date' value={selectedDate} onChange={(event) => event.currentTarget.form?.requestSubmit()} />
-            </form>
+              <input id='dashboard-date' type='date' name='date' max={today} value={selectedDate} onChange={(event) => void handleDateChange(event.target.value)} />
+            </div>
+            <label className='transaction-filter-control'>
+              <span>Type</span>
+              <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} disabled={isDateLoading}>
+                <option value=''>All types</option>
+                {paymentTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </label>
+            <label className='transaction-filter-control'>
+              <span>Device</span>
+              <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)} disabled={isDateLoading}>
+                <option value=''>All devices</option>
+                {devices.map((device) => <option key={device} value={device}>{device}</option>)}
+              </select>
+            </label>
             <label className='sort-control'>
               <span>Sort by</span>
               <select value={sortField} onChange={(event) => setSortField(event.target.value as SortField)}>
@@ -310,7 +453,9 @@ export default function DashboardTransactions({
           </div>
         </div>
 
-        {hasError ? (
+        {isDateLoading ? (
+          <TransactionsLoadingSkeleton viewMode={viewMode} />
+        ) : hasError ? (
           <div className='transactions-message' role='alert'>
             <strong>Transactions could not be loaded.</strong>
             <span>Check the payments table access policy and try again.</span>
@@ -318,8 +463,8 @@ export default function DashboardTransactions({
         ) : sortedTransactions.length === 0 ? (
           <div className='transactions-empty'>
             <span className='empty-icon'><ReceiptText size={22} aria-hidden='true' /></span>
-            <strong>No transactions recorded on this date</strong>
-            <span>Payments recorded for this date will appear here.</span>
+            <strong>{typeFilter || deviceFilter ? 'No transactions match these filters' : 'No transactions recorded on this date'}</strong>
+            <span>{typeFilter || deviceFilter ? 'Choose a different payment type or device.' : 'Payments recorded for this date will appear here.'}</span>
           </div>
         ) : viewMode === 'table' ? (
           <div className='transactions-table-scroll'>

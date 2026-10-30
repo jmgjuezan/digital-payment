@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { LayoutGrid, List, WalletCards } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { CalendarDays, LayoutGrid, List, WalletCards } from 'lucide-react'
+import { getBalancesForDate } from '@/app/balances/actions'
 
 export type Balance = {
   id: number
@@ -33,12 +34,58 @@ const currency = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 2,
 })
 
+function getTodayInPaymentTimeZone() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+
+  return `${values.year}-${values.month}-${values.day}`
+}
+
+function BalanceDataSkeleton({ viewMode, columns }: { viewMode: ViewMode; columns: number }) {
+  if (viewMode === 'cards') {
+    return (
+      <div className='transactions-card-grid transactions-loading-skeleton' role='status' aria-label='Loading balances'>
+        {Array.from({ length: 6 }, (_, index) => (
+          <div className='transaction-card' key={index} aria-hidden='true'>
+            <span className='dashboard-skeleton-block transactions-loading-card-title' />
+            <div className='transactions-loading-card-details'>
+              {Array.from({ length: 4 }, (_, cell) => <span className='dashboard-skeleton-block' key={cell} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className='transactions-table-scroll transactions-loading-skeleton' role='status' aria-label='Loading balances'>
+      <table className='transactions-table' aria-hidden='true'>
+        <thead>
+          <tr>{Array.from({ length: columns }, (_, index) => <th key={index}><span className='dashboard-skeleton-block transactions-loading-cell' /></th>)}</tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 6 }, (_, row) => (
+            <tr key={row}>
+              {Array.from({ length: columns }, (_, cell) => <td key={cell}><span className='dashboard-skeleton-block transactions-loading-cell' /></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function BalanceRecords({
-  balances,
-  payments,
-  hasError,
-  hasPaymentError,
-  selectedDate,
+  balances: initialBalances,
+  payments: initialPayments,
+  hasError: initialHasError,
+  hasPaymentError: initialHasPaymentError,
+  selectedDate: initialSelectedDate,
 }: {
   balances: Balance[]
   payments: BalancePayment[]
@@ -46,8 +93,45 @@ export default function BalanceRecords({
   hasPaymentError: boolean
   selectedDate: string
 }) {
+  const [balances, setBalances] = useState(initialBalances)
+  const [payments, setPayments] = useState(initialPayments)
+  const [hasError, setHasError] = useState(initialHasError)
+  const [hasPaymentError, setHasPaymentError] = useState(initialHasPaymentError)
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
+  const [isDateLoading, setIsDateLoading] = useState(false)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
+  const dateRequestId = useRef(0)
+  const today = getTodayInPaymentTimeZone()
+
+  async function handleDateChange(date: string) {
+    if (!date || date > today || date === selectedDate) return
+
+    setSelectedDate(date)
+    setIsDateLoading(true)
+    setHasError(false)
+    setHasPaymentError(false)
+    const requestId = ++dateRequestId.current
+    window.history.replaceState(null, '', `/balances?date=${encodeURIComponent(date)}`)
+
+    try {
+      const result = await getBalancesForDate(date)
+      if (requestId !== dateRequestId.current) return
+
+      setBalances(result.balances as Balance[])
+      setPayments(result.payments as BalancePayment[])
+      setHasError(result.hasError)
+      setHasPaymentError(result.hasPaymentError)
+    } catch {
+      if (requestId === dateRequestId.current) {
+        setHasError(true)
+        setHasPaymentError(true)
+      }
+    } finally {
+      if (requestId === dateRequestId.current) setIsDateLoading(false)
+    }
+  }
+
   const balancesWithActivity = useMemo<BalanceWithActivity[]>(() => balances.map((balance) => {
     const matchingPayments = payments.filter((payment) => payment.device === balance.device
       && payment.type.toLowerCase().startsWith(balance.type.toLowerCase())
@@ -76,30 +160,27 @@ export default function BalanceRecords({
   }, [balancesWithActivity, sortDirection])
   const totalBalance = balances.reduce((sum, balance) => sum + Number(balance.amount || 0), 0)
 
-  if (hasError) {
-    return (
-      <div className='transactions-message' role='alert'>
-        <strong>Balances could not be loaded.</strong>
-        <span>Check the balances table access policy and try again.</span>
-      </div>
-    )
-  }
-
-  if (balances.length === 0) {
-    return (
-      <div className='transactions-empty'>
-        <strong>No balances recorded for this date</strong>
-        <span>Saved balances will appear here.</span>
-      </div>
-    )
-  }
-
   return (
     <>
+      <div className='dashboard-heading-row'>
+        <div>
+          <p className='dashboard-eyebrow'>Account records</p>
+          <h1 id='balances-title'>Balances</h1>
+          <p className='dashboard-date'><CalendarDays size={16} aria-hidden='true' />Balances recorded for {selectedDate}</p>
+        </div>
+        <div className='dashboard-count' aria-live='polite'>
+          {isDateLoading ? <span className='dashboard-skeleton-block transactions-loading-count' aria-label='Loading balance count' /> : (
+            <>
+              <span>{balances.length}</span>
+              <small>{balances.length === 1 ? 'balance' : 'balances'}</small>
+            </>
+          )}
+        </div>
+      </div>
       <div className='dashboard-summary' aria-label='Balance total'>
         <div className='summary-item'>
           <span className='summary-label'>Total balance</span>
-          <strong>{currency.format(totalBalance)}</strong>
+          {isDateLoading ? <span className='dashboard-skeleton-block transactions-loading-total' /> : <strong>{currency.format(totalBalance)}</strong>}
         </div>
         <div className='summary-note'>Across balances recorded for this date</div>
       </div>
@@ -113,7 +194,14 @@ export default function BalanceRecords({
         {hasPaymentError && (
           <p className='computed-balance-warning' role='status'>Payment activity could not be loaded, so computed balances may be incomplete.</p>
         )}
-        {balancesWithActivity.length === 0 ? (
+        {isDateLoading ? (
+          <BalanceDataSkeleton viewMode={viewMode} columns={6} />
+        ) : hasError ? (
+          <div className='transactions-message' role='alert'>
+            <strong>Balances could not be loaded.</strong>
+            <span>Check the balances table access policy and try again.</span>
+          </div>
+        ) : balancesWithActivity.length === 0 ? (
           <div className='transactions-empty'>
             <strong>No balances to calculate</strong>
             <span>Set a balance to see the computed amount.</span>
@@ -181,10 +269,10 @@ export default function BalanceRecords({
           <h2>Balance records</h2>
         </div>
         <div className='transaction-controls'>
-          <form className='dashboard-date-filter' action='/balances' method='get'>
+          <div className='dashboard-date-filter'>
             <label htmlFor='balances-date'>Date</label>
-            <input id='balances-date' type='date' name='date' value={selectedDate} onChange={(event) => event.currentTarget.form?.requestSubmit()} />
-          </form>
+            <input id='balances-date' type='date' name='date' max={today} value={selectedDate} onChange={(event) => void handleDateChange(event.target.value)} />
+          </div>
           <label className='sort-control'>
             <span>Sort by type and device</span>
             <select value={sortDirection} onChange={(event) => setSortDirection(event.target.value as 'asc' | 'desc')}>
@@ -214,7 +302,19 @@ export default function BalanceRecords({
           </div>
         </div>
       </div>
-      {viewMode === 'table' ? (
+      {isDateLoading ? (
+        <BalanceDataSkeleton viewMode={viewMode} columns={3} />
+      ) : hasError ? (
+        <div className='transactions-message' role='alert'>
+          <strong>Balances could not be loaded.</strong>
+          <span>Check the balances table access policy and try again.</span>
+        </div>
+      ) : balances.length === 0 ? (
+        <div className='transactions-empty'>
+          <strong>No balances recorded for this date</strong>
+          <span>Saved balances will appear here.</span>
+        </div>
+      ) : viewMode === 'table' ? (
         <div className='transactions-table-scroll'>
           <table className='transactions-table'>
             <thead>

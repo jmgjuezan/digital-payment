@@ -82,6 +82,7 @@ The dashboard and transaction form use the `payments` table fields documented in
 | `npm run dev` | Start the local development server |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run TypeScript checks with `tsc --noEmit` |
+| `npm test` | Run unit tests with Vitest (see [TESTING.md](TESTING.md)) |
 | `npm run build` | Create an optimized production build |
 | `npm run start` | Serve the production build locally |
 

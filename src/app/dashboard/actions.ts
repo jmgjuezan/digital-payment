@@ -52,3 +52,40 @@ export async function checkTodayBalance(): Promise<TodayBalanceCheck> {
 
   return { hasBalance: !error && Boolean(count), hasError: Boolean(error) }
 }
+
+export async function getTransactionsForDate(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > getTodayInPaymentTimeZone()) {
+    return { transactions: [], hasError: true }
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  if (!supabaseUrl || !supabasePublishableKey) return { transactions: [], hasError: true }
+
+  const cookieStore = await cookies()
+  const supabase = createServerClient(supabaseUrl, supabasePublishableKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // Middleware refreshes cookies when server components cannot write them.
+        }
+      },
+    },
+  })
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data, error } = await supabase
+    .from('payments')
+    .select('id, created_at, type, tran_id, payment_date:date, date:time, charge, amount, device, note')
+    .eq('date', date)
+    .order('time', { ascending: false })
+
+  return { transactions: data ?? [], hasError: Boolean(error) }
+}

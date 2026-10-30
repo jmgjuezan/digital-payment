@@ -12,7 +12,7 @@
 
 ## Requirements Execution Guardrails
 - **Code Style**: Functional programming patterns, strict TypeScript mode, single quotes, no semicolons.
-- **Testing**: Write unit tests using Vitest *before* completing the feature logic.
+- **Testing**: Write unit tests using Vitest *before* completing the feature logic. Maintain the 95% coverage thresholds in [CODE_COVERAGE.md](CODE_COVERAGE.md) and run `npm run test:coverage` for code changes. Refer to [TESTING.md](TESTING.md) for testing standards and patterns.
 - **Scope Limits**: Keep Git diffs tightly contained to the requested feature. Do not refactor unrelated files.
 - **Safety**: Do not install new third-party packages or update `package.json` without asking first.
 
@@ -22,8 +22,11 @@ Design and implement every screen for phones first (320px–430px), then scale u
 - Touch targets at least 44px. Prefer full-width primary actions stacked at the bottom of forms.
 - Avoid horizontal overflow: wrap text, allow tables/lists to stack or scroll inside the page, never clip inputs or buttons off-screen.
 - Spacing and type should stay readable on small screens (comfortable padding, no dense multi-column grids).
+- Always consider doing async calls for data fetching.
+- Show only skeleton loaders on the UI while waiting for data to be fetched (avoid blank screens, spinners, or layout shifts).
 - Verify UI changes on a mobile viewport (and desktop if layout also changes there) before considering the work done.
 
 ## Where to Find Requirements
 - Global feature specifications live in the `/docs/specs/` folder.
 - Follow active task instructions detailed in `REQUIREMENTS.md` at the project root.
+- Unit testing guidelines and blueprints are documented in [TESTING.md](TESTING.md) at the project root.
