@@ -15,6 +15,7 @@
 - **Testing**: Write unit tests using Vitest *before* completing the feature logic. Maintain the 95% coverage thresholds in [CODE_COVERAGE.md](CODE_COVERAGE.md) and run `npm run test:coverage` for code changes. Refer to [TESTING.md](TESTING.md) for testing standards and patterns.
 - **Scope Limits**: Keep Git diffs tightly contained to the requested feature. Do not refactor unrelated files.
 - **Safety**: Do not install new third-party packages or update `package.json` without asking first.
+- **Supabase Secrets and Local State**: Never commit credentials, service-role or secret keys, or generated local Supabase state. Keep `supabase/.temp/` and `supabase/.branches/` ignored; commit only intentional Supabase configuration, migrations, and seed files. Before committing, inspect the staged file list and diff for environment files, generated runtime files, and secrets.
 
 ## UI: Mobile-first
 Design and implement every screen for phones first (320px–430px), then scale up. This app is used on the device that owns the wallet (GCash, Maya, or bank).

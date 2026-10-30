@@ -1,6 +1,6 @@
 # Digital Payment
 
-Digital Payment is a web application for recording and reviewing payments and transfers made through GCash, Maya, and supported banks. Authenticated users can view today's payment records, sort and switch their display, and add new transactions.
+Digital Payment is a web application for recording and reviewing payments and transfers made through GCash, Maya, and supported banks. Authenticated users can review daily transactions and balances, filter and sort records, and add transactions or balances.
 
 This application was built from scratch entirely with AI.
 
@@ -8,10 +8,13 @@ This application was built from scratch entirely with AI.
 
 - Email-and-password authentication through Supabase Auth
 - Protected dashboard and transaction-entry routes
-- Dashboard showing today's payments in the `Asia/Manila` time zone
-- Table and card views, sortable payment fields, and daily amount/charge totals
-- Transaction entry with validated payment type, device, payment time, amount, charge, and optional reference/note
-- Responsive layout for desktop and mobile screens
+- Transaction and balance dashboards with date selection limited to today or earlier
+- Asynchronous dashboard date changes with loading skeletons while records are fetched
+- Transaction filters, sorting, and table/card views
+- Payment summary by type with amount and charge totals, plus a consolidated total calculated as cash-in and load + charges − cash-out
+- Transaction entry with validated payment type, device, payment date/time, amount, charge, and transaction ID (optional for loads)
+- Balance entry with validated balance type, device, and amount
+- Responsive, mobile-first layouts
 
 ## Tech Stack
 
@@ -70,8 +73,10 @@ This application was built from scratch entirely with AI.
 | --- | --- | --- |
 | `/` | Redirects to `/login` | Public |
 | `/login` | Sign-in, sign-up, and password recovery | Public; signed-in users are redirected to the dashboard |
-| `/dashboard` | Today's transactions, totals, sorting, and table/card views | Authenticated |
+| `/dashboard` | Date-based transactions, filters, totals, sorting, and table/card views | Authenticated |
+| `/balances` | Date-based balance records and computed balances | Authenticated |
 | `/transactions/new` | Add and save a payment transaction | Authenticated |
+| `/balances/new` | Add and save a balance record | Authenticated |
 
 The dashboard and transaction form use the `payments` table fields documented in [supabase.md](supabase.md). New transaction inserts are validated on the server before being sent to Supabase.
 

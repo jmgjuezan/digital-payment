@@ -6,6 +6,8 @@ For authenticated Supabase and end-to-end checks against a dedicated test projec
 
 For real-browser automation scope and responsive UI scenarios, see [`UI_AUTOMATION_TESTING.md`](UI_AUTOMATION_TESTING.md).
 
+For browser performance measurements and dashboard loading checks, see [`PERFORMANCE_TESTING.md`](PERFORMANCE_TESTING.md).
+
 ---
 
 ## 1. Testing Philosophy & Guardrails

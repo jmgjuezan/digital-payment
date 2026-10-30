@@ -13,6 +13,8 @@ The suite creates a temporary auth user and otherwise uses read-only table queri
 - Install Docker Desktop and start it. The script uses an installed Supabase CLI or downloads it through `npx` when needed.
 - Run the project-local script from PowerShell. It starts Supabase in Docker, resets the local database, applies migrations, reads the local API key, and runs the integration suite.
 - The script never targets a hosted project and does not use a service-role key.
+- Supabase CLI runtime state can contain generated local credentials, including service-role keys and JWT secrets. The repository ignores `supabase/.temp/` and `supabase/.branches/`; do not force-add or commit these directories. Only add intentional project files such as `supabase/config.toml`, migrations, and reviewed seed data.
+- Before committing Supabase changes, inspect `git status --short` and the staged diff. Confirm `.env*` files (except documented example templates) and generated Supabase state are not staged, and do not paste credential values into commit messages or issue reports.
 
 ## Run the application
 
