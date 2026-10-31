@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, CalendarDays, LayoutGrid, List, LogOut, ReceiptText, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDown, ArrowUp, CalendarDays, Check, Copy, LayoutGrid, List, LogOut, ReceiptText, X } from 'lucide-react'
 import { getTransactionsForDate } from '@/app/dashboard/actions'
 import AppActionFooter from '@/components/layout/AppActionFooter'
 
@@ -173,9 +173,22 @@ export default function DashboardTransactions({
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [typeFilter, setTypeFilter] = useState('')
   const [deviceFilter, setDeviceFilter] = useState('')
+  const [totalCopyStatus, setTotalCopyStatus] = useState<'copied' | 'failed' | ''>('')
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
   const summaryDialogRef = useRef<HTMLDialogElement>(null)
   const dateRequestId = useRef(0)
   const today = getTodayInTimeZone(timeZone)
+
+  useEffect(() => {
+    if (!isSummaryDialogOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isSummaryDialogOpen])
 
   const paymentTypes = useMemo(
     () => [...new Set(transactions.map((payment) => payment.type).filter(Boolean))].sort((first, second) => first.localeCompare(second)),
@@ -243,6 +256,15 @@ export default function DashboardTransactions({
     .filter((payment) => /cash-out/i.test(payment.type))
     .reduce((total, payment) => total + Number(payment.amount || 0), 0)
   const consolidatedTotal = consolidatedCashInLoad + totalCharges - consolidatedCashOut
+
+  async function copyConsolidatedTotal() {
+    try {
+      await navigator.clipboard.writeText(consolidatedTotal.toFixed(2))
+      setTotalCopyStatus('copied')
+    } catch {
+      setTotalCopyStatus('failed')
+    }
+  }
 
   return (
     <main className='dashboard-shell has-action-footer'>
@@ -314,13 +336,22 @@ export default function DashboardTransactions({
           className='type-summary-toggle'
           type='button'
           disabled={isDateLoading}
-          onClick={() => summaryDialogRef.current?.showModal()}
+          onClick={() => {
+            setTotalCopyStatus('')
+            summaryDialogRef.current?.showModal()
+            setIsSummaryDialogOpen(true)
+          }}
         >
           <ReceiptText size={16} aria-hidden='true' />
           <span>Summary by payment type</span>
         </button>
 
-        <dialog className='type-summary-dialog' ref={summaryDialogRef} aria-labelledby='payment-type-summary-title'>
+        <dialog
+          className='type-summary-dialog'
+          ref={summaryDialogRef}
+          aria-labelledby='payment-type-summary-title'
+          onClose={() => setIsSummaryDialogOpen(false)}
+        >
           <div className='type-summary-dialog-header'>
             <div>
               <p className='dashboard-eyebrow'>Payment summary</p>
@@ -381,8 +412,22 @@ export default function DashboardTransactions({
             <div className='type-summary-total' role='group' aria-label='Summary total'>
               <div>
                 <span>Total</span>
-                <strong>{currency.format(consolidatedTotal)}</strong>
+                <div className='type-summary-total-value'>
+                  <strong>{currency.format(consolidatedTotal)}</strong>
+                  <button
+                    className='type-summary-copy-button'
+                    type='button'
+                    aria-label={totalCopyStatus === 'copied' ? 'Total copied' : 'Copy total amount without peso sign or commas'}
+                    title='Copy amount without peso sign or commas'
+                    onClick={() => void copyConsolidatedTotal()}
+                  >
+                    {totalCopyStatus === 'copied' ? <Check size={16} aria-hidden='true' /> : <Copy size={16} aria-hidden='true' />}
+                  </button>
+                </div>
               </div>
+              <span className='sr-only' role='status' aria-live='polite'>
+                {totalCopyStatus === 'copied' ? 'Total amount copied.' : totalCopyStatus === 'failed' ? 'Could not copy total amount.' : ''}
+              </span>
               <p>Formula: Cash-in and load + charges − cash-out</p>
               <small>
                 {currency.format(consolidatedCashInLoad)} + {currency.format(totalCharges)} − {currency.format(consolidatedCashOut)}

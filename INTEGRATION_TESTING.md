@@ -22,7 +22,7 @@ The suite creates a temporary auth user and otherwise uses read-only table queri
 2. Start the local Supabase stack with `supabase start`.
 3. Copy the API URL and anon key from `supabase status` into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 4. Start the application with `npm run dev`.
-5. Create a local account through the app's sign-up flow, then complete the manual checks below.
+5. Create a test user in the local Supabase Auth dashboard, then sign in through the app and complete the manual checks below. Public sign-up is not available in the app.
 
 Run the Docker-backed Supabase integration suite from the repository root:
 

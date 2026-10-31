@@ -40,11 +40,16 @@ export default function NewTransactionForm() {
   const [activeDeviceIndex, setActiveDeviceIndex] = useState(-1)
   const [deviceSelectionError, setDeviceSelectionError] = useState(false)
   const [paymentDate, setPaymentDate] = useState(getTodayInPaymentTimeZone)
+  const [paymentTime, setPaymentTime] = useState('')
   const [amount, setAmount] = useState('')
   const [charge, setCharge] = useState('')
+  const [transactionId, setTransactionId] = useState('')
+  const [note, setNote] = useState('')
+  const [dismissedErrorState, setDismissedErrorState] = useState<CreatePaymentState | null>(null)
   const [showChargeHelp, setShowChargeHelp] = useState(false)
   const chargeHelpButtonRef = useRef<HTMLButtonElement>(null)
   const chargeHelpTooltipRef = useRef<HTMLSpanElement>(null)
+  const formErrorRef = useRef<HTMLParagraphElement>(null)
   const transactionIdRequired = Boolean(paymentType) && !paymentType.endsWith('Load')
   const today = getTodayInPaymentTimeZone()
   const yesterday = getYesterdayInPaymentTimeZone()
@@ -66,6 +71,13 @@ export default function NewTransactionForm() {
     if (pending && !dialog.open) dialog.showModal()
     if (!pending && dialog.open) dialog.close()
   }, [pending])
+
+  useEffect(() => {
+    if (!state.error || dismissedErrorState === state) return
+
+    formErrorRef.current?.focus()
+    formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [state, dismissedErrorState])
 
   useEffect(() => {
     if (!showChargeHelp) return
@@ -158,6 +170,8 @@ export default function NewTransactionForm() {
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    setDismissedErrorState(state)
+
     if (!paymentType) {
       event.preventDefault()
       setPaymentTypeSelectionError(true)
@@ -180,6 +194,7 @@ export default function NewTransactionForm() {
         <input
           id='type'
           ref={paymentTypeInputRef}
+          tabIndex={3}
           type='text'
           role='combobox'
           aria-autocomplete='list'
@@ -221,7 +236,7 @@ export default function NewTransactionForm() {
                 {option}
               </li>
             )) : (
-              <li className='payment-type-no-options' role='option' aria-disabled='true'>No matching payment types</li>
+              <li className='payment-type-no-options' role='option' aria-selected={false} aria-disabled='true'>No matching payment types</li>
             )}
           </ul>
         )}
@@ -234,6 +249,7 @@ export default function NewTransactionForm() {
           <input
             id='device'
             ref={deviceInputRef}
+            tabIndex={4}
             type='text'
             role='combobox'
             aria-autocomplete='list'
@@ -275,7 +291,7 @@ export default function NewTransactionForm() {
                 </li>
               ))}
               {filteredDevices.length === 0 && (
-                <li className='payment-type-no-options' role='option' aria-disabled='true'>No matching devices</li>
+                <li className='payment-type-no-options' role='option' aria-selected={false} aria-disabled='true'>No matching devices</li>
               )}
             </ul>
           )}
@@ -288,6 +304,7 @@ export default function NewTransactionForm() {
           id='payment_date'
           name='payment_date'
           type='date'
+          tabIndex={11}
           min={yesterday}
           max={today}
           value={paymentDate}
@@ -300,7 +317,7 @@ export default function NewTransactionForm() {
       </div>
       <div className='form-field'>
         <label htmlFor='date'>Payment time <span aria-hidden='true'>*</span></label>
-        <input id='date' name='date' type='time' required />
+        <input id='date' name='date' type='time' tabIndex={5} value={paymentTime} onChange={(event) => setPaymentTime(event.target.value)} required />
       </div>
       <div className='form-field amount-charge-field'>
         <label htmlFor='amount'>Amount <span aria-hidden='true'>*</span></label>
@@ -309,10 +326,12 @@ export default function NewTransactionForm() {
           <input
             id='amount'
             name='amount'
+            tabIndex={6}
             type='number'
             min='0.01'
             step='0.01'
             required
+            value={amount}
             placeholder='0.00'
             onKeyDown={preventNegativeAmount}
             onChange={(event) => {
@@ -337,6 +356,7 @@ export default function NewTransactionForm() {
             <button
               className='charge-help-button'
               ref={chargeHelpButtonRef}
+              tabIndex={7}
               type='button'
               aria-label='Charges help'
               aria-expanded={showChargeHelp}
@@ -358,6 +378,7 @@ export default function NewTransactionForm() {
           <input
             id='charge'
             name='charge'
+            tabIndex={8}
             type='number'
             min='0'
             step='0.01'
@@ -379,17 +400,20 @@ export default function NewTransactionForm() {
         <input
           id='tran_id'
           name='tran_id'
+          tabIndex={9}
           maxLength={4}
           placeholder={transactionIdRequired ? 'Required, up to 4 characters' : 'Optional, up to 4 characters'}
           required={transactionIdRequired}
+          value={transactionId}
+          onChange={(event) => setTransactionId(event.target.value)}
         />
       </div>
       <div className='form-field form-field-wide'>
         <label htmlFor='note'>Note</label>
-        <textarea id='note' name='note' maxLength={500} rows={3} placeholder='Add a note (optional)' />
+        <textarea id='note' name='note' tabIndex={10} maxLength={500} rows={3} placeholder='Add a note (optional)' value={note} onChange={(event) => setNote(event.target.value)} />
       </div>
 
-      {state.error && <p className='transaction-form-error' role='alert'>{state.error}</p>}
+      {state.error && dismissedErrorState !== state && <p className='transaction-form-error' role='alert' tabIndex={-1} ref={formErrorRef}>{state.error}</p>}
     </form>
     <div className='app-action-footer'>
       <div className='app-action-footer-inner'>

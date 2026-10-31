@@ -1,7 +1,7 @@
 # SPECIFICATION: Supabase Auth UI Integration
 
 ## 1. Context & Objective
-We want to add a user authentication interface using the pre-built components from Supabase Auth UI. Authentication uses the user's email address and password. Passwordless sign-in and third-party providers are disabled.
+We want to provide sign-in and password recovery using the pre-built components from Supabase Auth UI. Authentication uses the user's email address and password. Account creation, passwordless sign-in, and third-party providers are not offered in the app.
 - **Out of Scope**: Custom HTML form inputs, multi-factor authentication (MFA), or custom CSS overrides outside of the theme tokens.
 - **Success Criteria**: A functional, stylized authentication form visible on `/login` that correctly authenticates users and redirects them to `/dashboard`.
 
@@ -40,6 +40,7 @@ The agent is **only** permitted to create or modify files within these paths:
   - Pass the active browser supabase client created via `@supabase/ssr`.
   - Configure the `appearance` object to match the application's visual tokens using `ThemeSupa`.
   - Do not enable magic-link or third-party social providers.
+  - Do not expose account creation; retain a separate password-recovery action.
   - Set the `view` property to default to `"sign_in"`.
   - Set `redirectTo` to point dynamically to `${window.location.origin}/auth/callback`.
 

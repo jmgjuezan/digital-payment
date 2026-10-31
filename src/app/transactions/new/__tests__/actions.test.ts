@@ -206,6 +206,12 @@ describe('createPayment action', () => {
     })
   })
 
+  it('returns a duplicate transaction message for unique constraint violations', async () => {
+    mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate key value' } })
+
+    expect(await createPayment({}, getValidPaymentForm())).toEqual({ error: 'Duplicate transaction.' })
+  })
+
   it('reports missing Supabase configuration for otherwise valid input', async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL
 

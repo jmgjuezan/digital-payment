@@ -67,9 +67,20 @@ button, a, input { font: inherit; }
 .login-content h2 { margin: 13px 0 9px; font-family: Georgia, 'Times New Roman', serif; font-size: 37px; font-weight: 400; line-height: 1.15; }
 .login-subtitle { margin: 0 0 32px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .auth-frame, .auth-frame [data-supabase-auth-ui] { width: 100%; }
+.auth-view-switch { display: block; min-height: 44px; margin: 8px auto 0; padding: 8px 12px; border: 0; background: transparent; color: var(--green); font: inherit; font-size: 14px; font-weight: 600; text-decoration: underline; cursor: pointer; }
 .auth-not-configured { padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #f8faf7; color: #52635a; font-size: 13px; line-height: 1.65; }
 .auth-not-configured strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 14px; }
 .auth-not-configured code { color: var(--green); font-size: 12px; }
+.privacy-page { min-height: 100svh; padding: 32px 18px 56px; background: #f5f7f3; }
+.privacy-document { width: min(100%, 760px); margin: 0 auto; padding: 30px 24px; border: 1px solid #e1e7e1; border-radius: 12px; background: #fff; color: #34473c; }
+.privacy-back-link { display: inline-flex; min-height: 44px; align-items: center; color: #1f6b4e; font-size: 14px; font-weight: 600; }
+.privacy-eyebrow { margin: 26px 0 8px; color: #1f6b4e; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.privacy-document h1 { margin: 0; color: #183d30; font-family: var(--font-heading), Georgia, serif; font-size: clamp(32px, 7vw, 44px); font-weight: 500; }
+.privacy-updated { margin: 8px 0 24px; color: #76827a; font-size: 13px; }
+.privacy-document h2 { margin: 28px 0 9px; color: #183d30; font-size: 18px; font-weight: 650; }
+.privacy-document p, .privacy-document li { color: #52635a; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.privacy-document ul { display: grid; gap: 8px; padding-left: 22px; }
+.privacy-document a:not(.privacy-back-link) { color: #1f6b4e; text-decoration: underline; text-underline-offset: 2px; }
 .auth-redirect-loading { display: grid; min-height: 220px; justify-items: center; align-content: center; gap: 11px; border: 1px solid var(--line); border-radius: 8px; background: #f8faf7; color: var(--muted); font-size: 13px; text-align: center; }
 .auth-redirect-loading strong { color: var(--ink); font-size: 15px; }
 .auth-loading-spinner { width: 27px; height: 27px; border: 3px solid #dcefe4; border-top-color: var(--green); border-radius: 50%; animation: auth-spin 700ms linear infinite; }
@@ -264,6 +275,15 @@ button, a, input { font: inherit; }
 .new-transaction-heading h1 { margin: 0; font-family: var(--font-heading), Georgia, serif; font-size: 32px; font-weight: 500; }
 .new-transaction-heading p:last-child { margin: 7px 0 0; color: #68766f; font-size: 13px; }
 .new-transaction-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 16px; padding: 24px; border: 1px solid #e1e7e1; border-radius: 8px; background: #fff; }
+.transaction-entry-skeleton-icon { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 8px; }
+.transaction-entry-skeleton-heading { display: grid; gap: 8px; }
+.transaction-entry-skeleton-description { width: 230px; max-width: 70vw; height: 13px; }
+.transaction-entry-skeleton-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 16px; padding: 24px; border: 1px solid #e1e7e1; border-radius: 8px; background: #fff; }
+.transaction-entry-skeleton-field { display: grid; align-content: start; gap: 7px; min-width: 0; }
+.transaction-entry-skeleton-label { width: 34%; height: 11px; }
+.transaction-entry-skeleton-input { width: 100%; height: 40px; }
+.transaction-entry-skeleton-note { grid-column: 1 / -1; }
+.transaction-entry-skeleton-textarea { width: 100%; height: 82px; }
 .form-field { display: grid; align-content: start; gap: 7px; min-width: 0; }
 .amount-charge-field { grid-template-rows: 16px auto auto; }
 .form-field label { color: #34473c; font-size: 12px; font-weight: 600; line-height: 16px; }
@@ -336,6 +356,10 @@ button, a, input { font: inherit; }
 .type-summary-total { display: grid; gap: 5px; padding-top: 12px; border-top: 1px solid #e7ece7; }
 .type-summary-total > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: #34473c; font-weight: 650; }
 .type-summary-total strong { color: #1b5b3e; font-size: 17px; }
+.type-summary-total-value { display: inline-flex; align-items: center; gap: 5px; }
+.type-summary-copy-button { display: inline-grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #52675a; cursor: pointer; }
+.type-summary-copy-button:hover, .type-summary-copy-button:focus-visible { border-color: #dce4dc; background: #f7faf7; color: #1f6b4e; }
+.type-summary-copy-button:focus-visible { outline: 2px solid #1f6b4e; outline-offset: 2px; }
 .type-summary-total p, .type-summary-total small { margin: 0; color: #7a867e; font-size: 11px; line-height: 1.45; }
 .balance-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 0 24px 20px; }
 .balance-form .transaction-form-error, .balance-form .transaction-form-actions { grid-column: 1 / -1; }
@@ -413,6 +437,9 @@ button, a, input { font: inherit; }
 }
 
 @media (max-width: 620px) {
+  .privacy-page { padding: 12px 12px 32px; }
+  .privacy-document { padding: 22px 18px; border-radius: 9px; }
+  .privacy-document h2 { margin-top: 24px; }
   .dashboard-header { min-height: 58px; height: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'brand actions' 'email email'; row-gap: 6px; padding: 8px 18px; }
   .dashboard-brand { grid-area: brand; }
   .dashboard-header-actions { display: contents; }
@@ -462,4 +489,6 @@ button, a, input { font: inherit; }
   .new-transaction-form { grid-template-columns: 1fr; gap: 16px; padding: 18px; }
   .form-field-wide, .transaction-form-error, .transaction-form-actions { grid-column: auto; }
   .new-transaction-heading h1 { font-size: 29px; }
+  .transaction-entry-skeleton-fields { grid-template-columns: 1fr; gap: 16px; padding: 18px; }
+  .transaction-entry-skeleton-note { grid-column: auto; }
 }

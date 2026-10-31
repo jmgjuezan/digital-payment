@@ -6,7 +6,7 @@ This application was built from scratch entirely with AI.
 
 ## Features
 
-- Email-and-password authentication through Supabase Auth
+- Email-and-password sign-in and password recovery through Supabase Auth (account creation is not offered in the app)
 - Protected dashboard and transaction-entry routes
 - Transaction and balance dashboards with date selection limited to today or earlier
 - Asynchronous dashboard date changes with loading skeletons while records are fetched
@@ -72,7 +72,9 @@ This application was built from scratch entirely with AI.
 | Path | Purpose | Access |
 | --- | --- | --- |
 | `/` | Redirects to `/login` | Public |
-| `/login` | Sign-in, sign-up, and password recovery | Public; signed-in users are redirected to the dashboard |
+| `/login` | Sign-in and password recovery | Public; signed-in users are redirected to the dashboard |
+| `/terms` | Terms of use | Public |
+| `/privacy` | Privacy policy | Public |
 | `/dashboard` | Date-based transactions, filters, totals, sorting, and table/card views | Authenticated |
 | `/balances` | Date-based balance records and computed balances | Authenticated |
 | `/transactions/new` | Add and save a payment transaction | Authenticated |

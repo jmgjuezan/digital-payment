@@ -58,6 +58,7 @@ export async function saveBalance(_previousState: SaveBalanceState, formData: Fo
   if (!user) redirect('/login')
 
   const { error } = await supabase.from('balances').insert({ type, device, date, amount })
+  if (error?.code === '23505') return { error: 'Duplicate transaction.' }
   if (error) return { error: 'Could not save the balance. Check your access and try again.' }
 
   redirect('/balances')

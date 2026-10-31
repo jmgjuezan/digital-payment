@@ -11,7 +11,7 @@ See [supabase-auth-ui.md](supabase-auth-ui.md) for the full authentication speci
 - Users authenticate with an email address and password.
 - Passwordless sign-in, including magic links, is disabled.
 - Third-party social providers are disabled.
-- The login interface includes sign-up and password-recovery links.
+- The login interface allows existing users to sign in and request password recovery; account creation is not offered in the app.
 - After successful sign-in, users are sent to `/dashboard`.
 - A user who already has a valid session and opens `/login` is redirected to `/dashboard`.
 

@@ -14,7 +14,7 @@ type AuthFormProps = {
 export default function AuthForm({ supabaseUrl, supabasePublishableKey }: AuthFormProps) {
   const router = useRouter()
   const [isRedirecting, setIsRedirecting] = useState(false)
-  const [authFormKey, setAuthFormKey] = useState(0)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
   const supabase = useMemo(() => {
     if (!supabaseUrl || !supabasePublishableKey) return null
     return createBrowserClient(supabaseUrl, supabasePublishableKey)
@@ -24,10 +24,6 @@ export default function AuthForm({ supabaseUrl, supabasePublishableKey }: AuthFo
     if (!supabase) return
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event as string) === 'SIGNED_UP') {
-        setAuthFormKey((key) => key + 1)
-      }
-
       if (event === 'SIGNED_IN' && session) {
         setIsRedirecting(true)
         router.replace('/dashboard')
@@ -59,54 +55,74 @@ export default function AuthForm({ supabaseUrl, supabasePublishableKey }: AuthFo
     )
   }
 
+  const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard`
+  const appearance = {
+    theme: ThemeSupa,
+    variables: {
+      default: {
+        colors: {
+          brand: '#1f6b4e',
+          brandAccent: '#174f3a',
+          inputBackground: '#ffffff',
+          inputBorder: '#dce4dc',
+          inputText: '#172c25',
+        },
+        radii: {
+          borderRadiusButton: '6px',
+          buttonBorderRadius: '6px',
+          inputBorderRadius: '6px',
+        },
+      },
+    },
+  }
+
   return (
     <div className='auth-frame'>
-      <Auth
-        key={authFormKey}
-        supabaseClient={supabase}
-        appearance={{
-          theme: ThemeSupa,
-          variables: {
-            default: {
-              colors: {
-                brand: '#1f6b4e',
-                brandAccent: '#174f3a',
-                inputBackground: '#ffffff',
-                inputBorder: '#dce4dc',
-                inputText: '#172c25',
+      {isForgotPassword ? (
+        <>
+          <button className='auth-view-switch' type='button' onClick={() => setIsForgotPassword(false)}>
+            Back to sign in
+          </button>
+          <Auth.ForgottenPassword
+            supabaseClient={supabase}
+            appearance={appearance}
+            redirectTo={redirectTo}
+            showLinks={false}
+            i18n={{
+              forgotten_password: {
+                loading_button_label: 'Sending reset link…',
               },
-              radii: {
-                borderRadiusButton: '6px',
-                buttonBorderRadius: '6px',
-                inputBorderRadius: '6px',
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <Auth
+            supabaseClient={supabase}
+            appearance={appearance}
+            providers={[]}
+            magicLink={false}
+            showLinks={false}
+            view='sign_in'
+            redirectTo={redirectTo}
+            onlyThirdPartyProviders={false}
+            localization={{
+              variables: {
+                sign_in: {
+                  email_label: 'Email address',
+                  email_input_placeholder: 'Enter your email address',
+                  password_label: 'Password',
+                  password_input_placeholder: 'Enter your password',
+                  loading_button_label: 'Signing in…',
+                },
               },
-            },
-          },
-        }}
-        providers={[]}
-        magicLink={false}
-        showLinks={true}
-        view='sign_in'
-        redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard`}
-        onlyThirdPartyProviders={false}
-        localization={{
-          variables: {
-            sign_in: {
-              email_label: 'Email address',
-              email_input_placeholder: 'Enter your email address',
-              password_label: 'Password',
-              password_input_placeholder: 'Enter your password',
-              loading_button_label: 'Signing in…',
-            },
-            sign_up: {
-              loading_button_label: 'Creating account…',
-            },
-            forgotten_password: {
-              loading_button_label: 'Sending reset link…',
-            },
-          },
-        }}
-      />
+            }}
+          />
+          <button className='auth-view-switch' type='button' onClick={() => setIsForgotPassword(true)}>
+            Forgot password?
+          </button>
+        </>
+      )}
     </div>
   )
 }

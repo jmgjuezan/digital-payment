@@ -21,4 +21,4 @@ The command prints a text summary and creates HTML and LCOV reports under `cover
 
 Open `coverage/index.html` in a browser to inspect file, function, line, and branch coverage.
 
-Latest measured unit coverage: 89.77% statements, 81.90% branches, 81.17% functions, and 91.32% lines. All four metrics currently meet the 80% minimum.
+Latest measured unit coverage: 89.39% statements, 81.55% branches, 80.21% functions, and 90.67% lines. All four metrics currently meet the 80% minimum.

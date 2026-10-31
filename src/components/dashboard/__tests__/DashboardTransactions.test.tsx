@@ -174,6 +174,21 @@ describe('DashboardTransactions Component', () => {
     expect(within(total).getByText('₱1,000.00 + ₱15.00 − ₱500.00')).toBeInTheDocument()
   })
 
+  it('copies the consolidated total without currency symbols or grouping commas', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+
+    render(<DashboardTransactions transactions={mockPayments} hasError={false} timeZone='Asia/Manila' selectedDate='2026-10-31' userEmail='' />)
+    fireEvent.click(screen.getByRole('button', { name: /summary by payment type/i }))
+    fireEvent.click(screen.getByRole('button', { name: /copy total amount/i }))
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('515.00'))
+    expect(screen.getByRole('status')).toHaveTextContent('Total amount copied.')
+  })
+
   it('shows filter-specific empty state and supports card view', () => {
     render(<DashboardTransactions transactions={mockPayments} hasError={false} timeZone='Asia/Manila' selectedDate='2026-10-31' userEmail='' />)
 

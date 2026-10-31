@@ -27,10 +27,12 @@ export default function SetBalanceForm({
   const [state, action, pending] = useActionState(saveBalance, initialState)
   const formRef = useRef<HTMLFormElement>(null)
   const savingDialogRef = useRef<HTMLDialogElement>(null)
+  const formErrorRef = useRef<HTMLParagraphElement>(null)
   const typeInputRef = useRef<HTMLInputElement>(null)
   const deviceInputRef = useRef<HTMLInputElement>(null)
   const submitForm = useCallback(() => formRef.current?.requestSubmit(), [])
   const today = getTodayInPaymentTimeZone()
+  const [amount, setAmount] = useState('')
   const [balanceType, setBalanceType] = useState('')
   const [balanceTypeQuery, setBalanceTypeQuery] = useState('')
   const [balanceTypeMenuOpen, setBalanceTypeMenuOpen] = useState(false)
@@ -41,12 +43,13 @@ export default function SetBalanceForm({
   const [deviceMenuOpen, setDeviceMenuOpen] = useState(false)
   const [activeDeviceIndex, setActiveDeviceIndex] = useState(-1)
   const [deviceError, setDeviceError] = useState(false)
+  const [dismissedErrorState, setDismissedErrorState] = useState<SaveBalanceState | null>(null)
   const filteredBalanceTypes = balanceTypes.filter((option) => option.toLowerCase().includes(balanceTypeQuery.trim().toLowerCase()))
   const filteredDevices = balanceDevices.filter((option) => option.toLowerCase().includes(deviceQuery.trim().toLowerCase()))
 
   useEffect(() => {
     onActionChange(submitForm, pending)
-  }, [action, pending, onActionChange])
+  }, [action, pending, onActionChange, submitForm])
 
   useEffect(() => {
     const dialog = savingDialogRef.current
@@ -55,6 +58,13 @@ export default function SetBalanceForm({
     if (pending && !dialog.open) dialog.showModal()
     if (!pending && dialog.open) dialog.close()
   }, [pending])
+
+  useEffect(() => {
+    if (!state.error || dismissedErrorState === state) return
+
+    formErrorRef.current?.focus()
+    formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [state, dismissedErrorState])
 
   function selectBalanceType(option: string) {
     setBalanceType(option)
@@ -113,6 +123,8 @@ export default function SetBalanceForm({
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    setDismissedErrorState(state)
+
     if (!balanceType) {
       event.preventDefault()
       setBalanceTypeError(true)
@@ -141,6 +153,7 @@ export default function SetBalanceForm({
           <input
             id='balance-type'
             ref={typeInputRef}
+            tabIndex={3}
             type='text'
             role='combobox'
             aria-autocomplete='list'
@@ -180,7 +193,7 @@ export default function SetBalanceForm({
                 >
                   {option}
                 </li>
-              )) : <li className='payment-type-no-options' role='option' aria-disabled='true'>No matching balance types</li>}
+              )) : <li className='payment-type-no-options' role='option' aria-selected={false} aria-disabled='true'>No matching balance types</li>}
             </ul>
           )}
         </div>
@@ -192,6 +205,7 @@ export default function SetBalanceForm({
           <input
             id='balance-device'
             ref={deviceInputRef}
+            tabIndex={4}
             type='text'
             role='combobox'
             aria-autocomplete='list'
@@ -232,7 +246,7 @@ export default function SetBalanceForm({
                   {option}
                 </li>
               ))}
-              {filteredDevices.length === 0 && <li className='payment-type-no-options' role='option' aria-disabled='true'>No matching devices</li>}
+              {filteredDevices.length === 0 && <li className='payment-type-no-options' role='option' aria-selected={false} aria-disabled='true'>No matching devices</li>}
             </ul>
           )}
         </div>
@@ -240,18 +254,29 @@ export default function SetBalanceForm({
       </div>
       <div className='form-field'>
         <label htmlFor='balance-date-display'>Date</label>
-        <input id='balance-date-display' type='text' value={today} readOnly aria-readonly='true' />
+        <input id='balance-date-display' type='text' tabIndex={6} value={today} readOnly aria-readonly='true' />
         <input type='hidden' name='date' value={today} />
       </div>
       <div className='form-field'>
         <label htmlFor='balance-amount'>Amount <span aria-hidden='true'>*</span></label>
         <div className='input-with-prefix'>
           <span aria-hidden='true'>₱</span>
-          <input id='balance-amount' name='amount' type='number' min='0' step='0.01' required placeholder='0.00' />
+          <input
+            id='balance-amount'
+            name='amount'
+            type='number'
+            tabIndex={5}
+            min='0'
+            step='0.01'
+            required
+            placeholder='0.00'
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+          />
         </div>
       </div>
 
-      {state.error && <p className='transaction-form-error' role='alert'>{state.error}</p>}
+      {state.error && dismissedErrorState !== state && <p className='transaction-form-error' role='alert' tabIndex={-1} ref={formErrorRef}>{state.error}</p>}
     </form>
     <dialog
       ref={savingDialogRef}

@@ -161,4 +161,15 @@ describe('saveBalance action', () => {
 
     expect(await saveBalance({}, formData)).toEqual({ error: 'Could not save the balance. Check your access and try again.' })
   })
+
+  it('returns a duplicate transaction message for unique constraint violations', async () => {
+    const formData = new FormData()
+    formData.set('type', 'GCash')
+    formData.set('device', 'CP1')
+    formData.set('date', today)
+    formData.set('amount', '5000')
+    mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate key value' } })
+
+    expect(await saveBalance({}, formData)).toEqual({ error: 'Duplicate transaction.' })
+  })
 })

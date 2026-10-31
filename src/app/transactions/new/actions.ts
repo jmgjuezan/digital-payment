@@ -96,6 +96,7 @@ export async function createPayment(_previousState: CreatePaymentState, formData
     note: note || null,
   })
 
+  if (error?.code === '23505') return { error: 'Duplicate transaction.' }
   if (error) return { error: 'Could not save the transaction. Check your access and try again.' }
 
   redirect('/dashboard')

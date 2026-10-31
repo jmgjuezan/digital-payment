@@ -72,15 +72,6 @@ describe('AuthForm Component', () => {
     expect(screen.getByText(/sign-in is not configured yet/i)).toBeInTheDocument()
   })
 
-  it('refreshes the auth widget after signup', () => {
-    render(<AuthForm supabaseUrl='https://example.supabase.co' supabasePublishableKey='anon-key' />)
-    expect(mockAuthCallback.current).toBeDefined()
-
-    act(() => mockAuthCallback.current?.('SIGNED_UP', null))
-
-    expect(mockAuthRender).toHaveBeenCalledTimes(2)
-  })
-
   it('shows a loading state and refreshes the router after sign in', () => {
     render(<AuthForm supabaseUrl='https://example.supabase.co' supabasePublishableKey='anon-key' />)
 

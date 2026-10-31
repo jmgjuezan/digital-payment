@@ -36,14 +36,14 @@ export default async function NewBalancePage() {
   return (
     <main className='dashboard-shell has-action-footer'>
       <header className='dashboard-header'>
-        <a className='dashboard-brand' href='/dashboard' aria-label='Digital Payment dashboard'>
+        <a className='dashboard-brand' href='/dashboard' aria-label='Digital Payment dashboard' tabIndex={1}>
           <span className='dashboard-brand-mark' aria-hidden='true'>↗</span>
           <span>Digital Payment</span>
         </a>
         <div className='dashboard-header-actions'>
           {user.email && <span className='dashboard-user-email' title={user.email}>{user.email}</span>}
           <form action='/auth/signout' method='post'>
-            <button className='dashboard-logout' type='submit'>
+            <button className='dashboard-logout' type='submit' tabIndex={2}>
               <LogOut size={15} aria-hidden='true' />
               <span>Log out</span>
             </button>
