@@ -2,6 +2,8 @@
 
 This folder contains the application's feature and business-rule specifications. The detailed specification is the source of truth; this page is an overview.
 
+See [business-flow.md](business-flow.md) for the end-to-end user journey, transaction and balance rules, and current access model.
+
 ## Supabase Authentication
 
 See [supabase-auth-ui.md](supabase-auth-ui.md) for the full authentication specification.
