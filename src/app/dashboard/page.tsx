@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import DashboardTransactions, { type Payment } from '@/components/dashboard/DashboardTransactions'
 import DashboardTransactionsSkeleton from '@/components/dashboard/DashboardTransactionsSkeleton'
+import { getUserRole, resolvePaymentCreatorEmails } from '@/lib/balance-access'
 
 const timeZone = 'Asia/Manila'
 
@@ -21,10 +22,14 @@ async function DashboardTransactionsData({
   dataPromise,
   selectedDate,
   userEmail,
+  canManageBalances,
+  canAddTransactions,
 }: {
   dataPromise: Promise<DashboardData>
   selectedDate: string
   userEmail: string
+  canManageBalances: boolean
+  canAddTransactions: boolean
 }) {
   const { transactions, hasError } = await dataPromise
 
@@ -35,6 +40,8 @@ async function DashboardTransactionsData({
       timeZone={timeZone}
       selectedDate={selectedDate}
       userEmail={userEmail}
+      canManageBalances={canManageBalances}
+      canAddTransactions={canAddTransactions}
     />
   )
 }
@@ -89,6 +96,12 @@ export default async function DashboardPage({
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  const role = await getUserRole(supabase, user.id)
+  const canManageBalances = role === 'admin' || role === 'moderator'
+  const canAddTransactions = role === 'admin' || role === 'user'
+  const transactionFields = canManageBalances
+    ? 'id, created_at, created_by, type, tran_id, date, time, charge, amount, device, note'
+    : 'id, created_at, type, tran_id, date, time, charge, amount, device, note'
 
   const { date: requestedDate } = await searchParams
   const today = getTodayInTimeZone(timeZone)
@@ -98,11 +111,11 @@ export default async function DashboardPage({
   const dataPromise: Promise<DashboardData> = Promise.resolve(
     supabase
       .from('payments')
-      .select('id, created_at, type, tran_id, payment_date:date, date:time, charge, amount, device, note')
+      .select(transactionFields)
       .eq('date', selectedDate)
       .order('time', { ascending: false })
-      .then(({ data, error }) => ({
-        transactions: (data ?? []) as unknown as Payment[],
+      .then(async ({ data, error }) => ({
+        transactions: await resolvePaymentCreatorEmails(supabase, (data ?? []) as unknown as Payment[]),
         hasError: Boolean(error),
       }))
   )
@@ -113,6 +126,8 @@ export default async function DashboardPage({
         dataPromise={dataPromise}
         selectedDate={selectedDate}
         userEmail={user.email ?? ''}
+        canManageBalances={canManageBalances}
+        canAddTransactions={canAddTransactions}
       />
     </Suspense>
   )

@@ -3,6 +3,7 @@ import { checkTodayBalance, getTransactionsForDate } from '@/app/dashboard/actio
 
 const mockRedirect = vi.fn()
 const mockGetUser = vi.fn()
+const mockRoleQuery = vi.fn()
 const mockSelect = vi.fn()
 const mockEq = vi.fn()
 const mockOrder = vi.fn()
@@ -26,9 +27,9 @@ vi.mock('@supabase/ssr', () => ({
     auth: {
       getUser: mockGetUser,
     },
-    from: () => ({
-      select: mockSelect,
-    }),
+    from: (table: string) => table === 'user_roles'
+      ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+      : { select: mockSelect },
   })),
 }))
 
@@ -41,6 +42,7 @@ describe('Dashboard Server Actions', () => {
     mockSelect.mockReturnValue({
       eq: mockEq,
     })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'admin' }, error: null })
     mockEq.mockReturnValue({
       order: mockOrder,
     })
@@ -115,6 +117,17 @@ describe('Dashboard Server Actions', () => {
 
       const result = await getTransactionsForDate('2026-10-31')
       expect(result).toEqual({ transactions: mockTx, hasError: false })
+      expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('created_by'))
+    })
+
+    it('does not request creator IDs for users', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+      mockRoleQuery.mockResolvedValue({ data: { role: 'user' }, error: null })
+      mockOrder.mockResolvedValue({ data: [], error: null })
+
+      await getTransactionsForDate('2026-10-31')
+
+      expect(mockSelect).toHaveBeenCalledWith(expect.not.stringContaining('created_by'))
     })
 
     it('returns empty transactions and an error when the query fails', async () => {

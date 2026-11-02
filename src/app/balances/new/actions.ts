@@ -3,6 +3,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { hasBalanceManagementAccess } from '@/lib/balance-access'
 
 export type SaveBalanceState = {
   error?: string
@@ -25,6 +26,7 @@ export async function saveBalance(_previousState: SaveBalanceState, formData: Fo
   const type = String(formData.get('type') ?? '').trim()
   const device = String(formData.get('device') ?? '').trim()
   const date = String(formData.get('date') ?? '').trim()
+  const returnDate = String(formData.get('return_date') ?? '').trim()
   const amount = Number(formData.get('amount'))
   const validDevices = Array.from({ length: 8 }, (_, index) => `CP${index + 1}`)
 
@@ -56,10 +58,15 @@ export async function saveBalance(_previousState: SaveBalanceState, formData: Fo
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  if (!await hasBalanceManagementAccess(supabase, user.id)) {
+    return { error: 'You do not have permission to manage balances.' }
+  }
 
   const { error } = await supabase.from('balances').insert({ type, device, date, amount })
   if (error?.code === '23505') return { error: 'Duplicate transaction.' }
   if (error) return { error: 'Could not save the balance. Check your access and try again.' }
 
-  redirect('/balances')
+  const validReturnDate = /^\d{4}-\d{2}-\d{2}$/.test(returnDate)
+    && returnDate <= getTodayInPaymentTimeZone()
+  redirect(validReturnDate ? `/balances?date=${encodeURIComponent(returnDate)}` : '/balances')
 }

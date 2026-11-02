@@ -20,6 +20,12 @@ describe('AddBalanceFooter Component', () => {
     expect(btn).toHaveAttribute('form', 'balance-form')
   })
 
+  it('returns to the selected balances date when canceling', () => {
+    render(<AddBalanceFooter pending={false} returnDate='2026-10-31' />)
+
+    expect(screen.getByRole('link', { name: /cancel/i })).toHaveAttribute('href', '/balances?date=2026-10-31')
+  })
+
   it('renders saving state and disables button while pending', () => {
     render(<AddBalanceFooter pending={true} />)
 

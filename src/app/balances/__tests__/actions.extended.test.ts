@@ -3,6 +3,7 @@ import { getBalancesForDate } from '@/app/balances/actions'
 
 const mockRedirect = vi.fn()
 const mockGetUser = vi.fn()
+const mockRoleMaybeSingle = vi.fn()
 const mockSelect = vi.fn()
 const mockEq = vi.fn()
 const mockOrder = vi.fn()
@@ -26,7 +27,9 @@ vi.mock('next/headers', () => ({
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
     auth: { getUser: mockGetUser },
-    from: () => ({ select: mockSelect }),
+    from: (table: string) => table === 'user_roles'
+      ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleMaybeSingle }) }) }
+      : { select: mockSelect },
   })),
 }))
 
@@ -35,6 +38,8 @@ describe('getBalancesForDate — extended coverage', () => {
     vi.clearAllMocks()
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key'
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRoleMaybeSingle.mockResolvedValue({ data: { role: 'moderator' }, error: null })
 
     // Default chain: .select().eq().order() for balances
     //                .select().gte().lte() for payments

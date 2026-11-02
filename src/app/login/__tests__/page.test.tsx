@@ -33,7 +33,7 @@ describe('LoginPage', () => {
   it('renders login when Supabase is not configured', async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL
 
-    render(await LoginPage())
+    render(await LoginPage({ searchParams: Promise.resolve({}) }))
 
     expect(screen.getByRole('heading', { name: 'Sign in to Digital Payment' })).toBeInTheDocument()
     expect(screen.getByTestId('auth-form')).toBeInTheDocument()
@@ -43,7 +43,7 @@ describe('LoginPage', () => {
   it('renders login for an unauthenticated user', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
 
-    render(await LoginPage())
+    render(await LoginPage({ searchParams: Promise.resolve({}) }))
 
     expect(screen.getByRole('heading', { name: 'Sign in to Digital Payment' })).toBeInTheDocument()
     expect(mockGetUser).toHaveBeenCalledOnce()
@@ -52,6 +52,18 @@ describe('LoginPage', () => {
   it('redirects authenticated users to the dashboard', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
 
-    await expect(LoginPage()).rejects.toThrow('NEXT_REDIRECT:/dashboard')
+    await expect(LoginPage({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/dashboard')
+  })
+
+  it('shows confirmation after password recovery', async () => {
+    render(await LoginPage({ searchParams: Promise.resolve({ 'password-updated': 'true' }) }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Password updated. Sign in with your new password.')
+  })
+
+  it('shows an error for an invalid recovery link', async () => {
+    render(await LoginPage({ searchParams: Promise.resolve({ error: 'recovery-link-invalid' }) }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('This password reset link is invalid or expired.')
   })
 })

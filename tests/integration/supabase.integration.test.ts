@@ -78,7 +78,7 @@ describe('Supabase integration', () => {
   it('reads today’s transactions through authenticated access and RLS', async () => {
     const { data, error } = await getSupabaseClient()
       .from('payments')
-      .select('id, created_at, type, tran_id, payment_date:date, date:time, charge, amount, device, note')
+      .select('id, created_at, type, tran_id, date, time, charge, amount, device, note')
       .eq('date', getTodayInPaymentTimeZone())
       .order('time', { ascending: false })
       .limit(10)

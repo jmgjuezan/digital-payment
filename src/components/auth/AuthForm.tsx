@@ -55,7 +55,9 @@ export default function AuthForm({ supabaseUrl, supabasePublishableKey }: AuthFo
     )
   }
 
-  const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard`
+  const redirectOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+  const signInRedirectTo = `${redirectOrigin}/dashboard`
+  const recoveryRedirectTo = `${redirectOrigin}/auth/callback`
   const appearance = {
     theme: ThemeSupa,
     variables: {
@@ -86,7 +88,7 @@ export default function AuthForm({ supabaseUrl, supabasePublishableKey }: AuthFo
           <Auth.ForgottenPassword
             supabaseClient={supabase}
             appearance={appearance}
-            redirectTo={redirectTo}
+            redirectTo={recoveryRedirectTo}
             showLinks={false}
             i18n={{
               forgotten_password: {
@@ -104,7 +106,7 @@ export default function AuthForm({ supabaseUrl, supabasePublishableKey }: AuthFo
             magicLink={false}
             showLinks={false}
             view='sign_in'
-            redirectTo={redirectTo}
+            redirectTo={signInRedirectTo}
             onlyThirdPartyProviders={false}
             localization={{
               variables: {

@@ -205,6 +205,7 @@ export default function NewTransactionForm() {
           aria-describedby={paymentTypeSelectionError ? 'payment-type-error' : undefined}
           required
           autoComplete='off'
+          autoFocus
           placeholder='Search payment type'
           value={paymentTypeQuery}
           onFocus={() => setPaymentTypeMenuOpen(true)}
@@ -299,10 +300,10 @@ export default function NewTransactionForm() {
         {deviceSelectionError && <span className='transaction-form-error payment-type-inline-error' id='device-selection-error' role='alert'>Select a device from the list.</span>}
       </div>
       <div className='form-field'>
-        <label htmlFor='payment_date'>Payment date <span aria-hidden='true'>*</span></label>
+        <label htmlFor='date'>Payment date <span aria-hidden='true'>*</span></label>
         <input
-          id='payment_date'
-          name='payment_date'
+          id='date'
+          name='date'
           type='date'
           tabIndex={11}
           min={yesterday}
@@ -316,8 +317,8 @@ export default function NewTransactionForm() {
         />
       </div>
       <div className='form-field'>
-        <label htmlFor='date'>Payment time <span aria-hidden='true'>*</span></label>
-        <input id='date' name='date' type='time' tabIndex={5} value={paymentTime} onChange={(event) => setPaymentTime(event.target.value)} required />
+        <label htmlFor='time'>Payment time <span aria-hidden='true'>*</span></label>
+        <input id='time' name='time' type='time' tabIndex={5} value={paymentTime} onChange={(event) => setPaymentTime(event.target.value)} required />
       </div>
       <div className='form-field amount-charge-field'>
         <label htmlFor='amount'>Amount <span aria-hidden='true'>*</span></label>
@@ -356,7 +357,7 @@ export default function NewTransactionForm() {
             <button
               className='charge-help-button'
               ref={chargeHelpButtonRef}
-              tabIndex={7}
+              tabIndex={12}
               type='button'
               aria-label='Charges help'
               aria-expanded={showChargeHelp}

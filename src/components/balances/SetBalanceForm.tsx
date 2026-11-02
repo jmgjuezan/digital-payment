@@ -21,8 +21,10 @@ function getTodayInPaymentTimeZone() {
 
 export default function SetBalanceForm({
   onActionChange,
+  returnDate,
 }: {
   onActionChange: (submit: () => void, pending: boolean) => void
+  returnDate?: string
 }) {
   const [state, action, pending] = useActionState(saveBalance, initialState)
   const formRef = useRef<HTMLFormElement>(null)
@@ -147,6 +149,7 @@ export default function SetBalanceForm({
       action={action}
       onSubmit={handleSubmit}
     >
+      {returnDate && <input type='hidden' name='return_date' value={returnDate} />}
       <div className='form-field'>
         <label htmlFor='balance-type'>Balance type <span aria-hidden='true'>*</span></label>
         <div className='payment-type-combobox'>
@@ -163,6 +166,7 @@ export default function SetBalanceForm({
             aria-activedescendant={balanceTypeMenuOpen && activeBalanceTypeIndex >= 0 ? `balance-type-option-${activeBalanceTypeIndex}` : undefined}
             aria-describedby={balanceTypeError ? 'balance-type-error' : undefined}
             autoComplete='off'
+            autoFocus
             placeholder='Search balance type'
             required
             value={balanceTypeQuery}

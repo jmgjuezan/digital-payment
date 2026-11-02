@@ -3,6 +3,7 @@ import { createPayment } from '@/app/transactions/new/actions'
 
 const mockRedirect = vi.fn()
 const mockGetUser = vi.fn()
+const mockRoleQuery = vi.fn()
 const mockSelect = vi.fn()
 const mockEq = vi.fn()
 const mockInsert = vi.fn()
@@ -25,16 +26,26 @@ vi.mock('next/headers', () => ({
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
     auth: { getUser: mockGetUser },
-    from: mockFrom,
+    from: (table: string) => table === 'user_roles'
+      ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+      : mockFrom(table),
   })),
 }))
 
 function makeFormData(overrides: Record<string, string | number> = {}) {
+  const dateParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const dateValues = Object.fromEntries(dateParts.map((part) => [part.type, part.value]))
+  const today = `${dateValues.year}-${dateValues.month}-${dateValues.day}`
   const defaults = {
     type: 'GCash Cash-in',
     tran_id: 'AB12',
-    payment_date: '2026-10-31',
-    date: '10:00',
+    date: today,
+    time: '10:00',
     device: 'CP1',
     note: '',
     amount: '500',
@@ -59,20 +70,22 @@ describe('createPayment — extended coverage', () => {
     mockSelect.mockReturnValue({ eq: mockEq })
     mockInsert.mockResolvedValue({ error: null })
     mockFrom.mockReturnValue({ select: mockSelect, insert: mockInsert })
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user', email: 'user@example.com' }, error: null })
   })
 
-  it('returns error for badly-formatted payment_date', async () => {
-    const result = await createPayment({}, makeFormData({ payment_date: '10/31/2026' }))
+  it('returns error for badly-formatted date', async () => {
+    const result = await createPayment({}, makeFormData({ date: '10/31/2026' }))
     expect(result).toEqual({ error: 'Enter a valid payment date.' })
   })
 
-  it('returns error for payment_date outside allowed range', async () => {
-    const result = await createPayment({}, makeFormData({ payment_date: '2020-01-01' }))
+  it('returns error for date outside allowed range', async () => {
+    const result = await createPayment({}, makeFormData({ date: '2020-01-01' }))
     expect(result).toEqual({ error: 'Payment date must be yesterday or today.' })
   })
 
   it('returns error when payment time is blank', async () => {
-    const result = await createPayment({}, makeFormData({ date: '' }))
+    const result = await createPayment({}, makeFormData({ time: '' }))
     expect(result).toEqual({ error: 'Enter the payment time.' })
   })
 

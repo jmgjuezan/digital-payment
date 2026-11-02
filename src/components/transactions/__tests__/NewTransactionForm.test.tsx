@@ -7,11 +7,19 @@ vi.mock('@/app/transactions/new/actions', () => ({
 }))
 
 describe('NewTransactionForm Component', () => {
+  it('autofocuses the payment type field', () => {
+    render(<NewTransactionForm />)
+
+    expect(screen.getByRole('combobox', { name: /payment type/i })).toHaveFocus()
+  })
+
   it('renders all required form inputs and submit button', () => {
     render(<NewTransactionForm />)
 
-    expect(screen.getByLabelText(/payment type/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /payment type/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/device/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/payment date/i)).toHaveAttribute('name', 'date')
+    expect(screen.getByLabelText(/payment time/i)).toHaveAttribute('name', 'time')
     expect(screen.getByLabelText(/amount/i)).toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: /charge/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /save transaction/i })).toBeInTheDocument()
@@ -21,7 +29,7 @@ describe('NewTransactionForm Component', () => {
     render(<NewTransactionForm />)
 
     // Focus and select GCash Cash-in
-    const typeInput = screen.getByLabelText(/payment type/i)
+    const typeInput = screen.getByRole('combobox', { name: /payment type/i })
     fireEvent.focus(typeInput)
 
     const option = screen.getByRole('option', { name: 'GCash Cash-in' })

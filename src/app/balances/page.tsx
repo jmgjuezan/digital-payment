@@ -7,6 +7,7 @@ import { LogOut } from 'lucide-react'
 import BalanceRecords, { type Balance } from '@/components/balances/BalanceRecords'
 import BalancesDashboardSkeleton from '@/components/balances/BalancesDashboardSkeleton'
 import AppActionFooter from '@/components/layout/AppActionFooter'
+import { hasBalanceManagementAccess } from '@/lib/balance-access'
 
 const timeZone = 'Asia/Manila'
 
@@ -87,6 +88,7 @@ export default async function BalancesPage({
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  if (!await hasBalanceManagementAccess(supabase, user.id)) redirect('/dashboard')
 
   const { date: requestedDate } = await searchParams
   const today = getTodayInPaymentTimeZone()
@@ -132,7 +134,7 @@ export default async function BalancesPage({
           <BalancesDashboardData dataPromise={dataPromise} selectedDate={selectedDate} />
         </Suspense>
       </section>
-      <AppActionFooter current='balances' />
+      <AppActionFooter current='balances' canManageBalances selectedDate={selectedDate} />
     </main>
   )
 }

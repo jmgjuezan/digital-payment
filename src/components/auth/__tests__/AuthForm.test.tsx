@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import AuthForm from '@/components/auth/AuthForm'
 
-const { mockAuthCallback, mockAuthRender, mockOnAuthStateChange, mockReplace, mockRefresh } = vi.hoisted(() => ({
+const { mockAuthCallback, mockAuthRender, mockForgottenPasswordRender, mockOnAuthStateChange, mockReplace, mockRefresh } = vi.hoisted(() => ({
   mockAuthCallback: { current: undefined as ((event: string, session: unknown) => void) | undefined },
   mockAuthRender: vi.fn(),
+  mockForgottenPasswordRender: vi.fn(),
   mockOnAuthStateChange: vi.fn(),
   mockReplace: vi.fn(),
   mockRefresh: vi.fn(),
@@ -12,10 +13,15 @@ const { mockAuthCallback, mockAuthRender, mockOnAuthStateChange, mockReplace, mo
 
 // Mock heavy Supabase auth-ui dependency – we only test our own wrapper logic
 vi.mock('@supabase/auth-ui-react', () => ({
-  Auth: (props: { supabaseClient: unknown }) => {
+  Auth: Object.assign((props: { supabaseClient: unknown; redirectTo?: string }) => {
     mockAuthRender(props)
     return <div data-testid='supabase-auth-ui' />
-  },
+  }, {
+    ForgottenPassword: (props: { supabaseClient: unknown; redirectTo?: string }) => {
+      mockForgottenPasswordRender(props)
+      return <div data-testid='supabase-auth-ui' />
+    },
+  }),
 }))
 
 vi.mock('@supabase/auth-ui-shared', () => ({
@@ -43,6 +49,7 @@ describe('AuthForm Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAuthCallback.current = undefined
+    vi.stubGlobal('window', { location: { origin: 'http://localhost:3000' } })
   })
 
   it('shows unconfigured message when supabase props are missing', () => {
@@ -62,6 +69,14 @@ describe('AuthForm Component', () => {
     )
 
     expect(screen.getByTestId('supabase-auth-ui')).toBeInTheDocument()
+    expect(mockAuthRender).toHaveBeenLastCalledWith(expect.objectContaining({ redirectTo: 'http://localhost:3000/dashboard' }))
+  })
+
+  it('sends password recovery emails to the auth callback', () => {
+    render(<AuthForm supabaseUrl='https://example.supabase.co' supabasePublishableKey='anon-key' />)
+    act(() => screen.getByRole('button', { name: /forgot password/i }).click())
+
+    expect(mockForgottenPasswordRender).toHaveBeenLastCalledWith(expect.objectContaining({ redirectTo: 'http://localhost:3000/auth/callback' }))
   })
 
   it('does not render the auth UI when only one prop is present', () => {

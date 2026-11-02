@@ -9,11 +9,12 @@ const mockPayments: Payment[] = [
     created_at: '2026-10-31T01:00:00Z',
     type: 'GCash Cash-in',
     tran_id: 'TX100',
-    payment_date: '2026-10-31',
-    date: '10:00:00',
+    date: '2026-10-31',
+    time: '10:00:00',
     charge: 10,
     amount: 1000,
     device: 'CP1',
+    created_by: 'creator@example.com',
     note: 'First note',
   },
   {
@@ -21,11 +22,12 @@ const mockPayments: Payment[] = [
     created_at: '2026-10-31T02:00:00Z',
     type: 'Maya Cash-out',
     tran_id: 'TX200',
-    payment_date: '2026-10-31',
-    date: '11:00:00',
+    date: '2026-10-31',
+    time: '11:00:00',
     charge: 5,
     amount: 500,
     device: 'CP2',
+    created_by: 'other-creator@example.com',
     note: 'Second note',
   },
 ]
@@ -50,9 +52,102 @@ describe('DashboardTransactions Component', () => {
     expect(screen.getAllByText('Maya Cash-out').length).toBeGreaterThan(0)
     expect(screen.getByText('TX100')).toBeInTheDocument()
     expect(screen.getByText('TX200')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Payment date' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Sort by')).not.toHaveTextContent('Payment date')
 
     // Transaction count
     expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  it('shows an edit page link only to balance managers', () => {
+    render(
+      <DashboardTransactions
+        transactions={mockPayments}
+        hasError={false}
+        timeZone='Asia/Manila'
+        selectedDate='2026-10-31'
+        userEmail='admin@example.com'
+        canManageBalances
+      />
+    )
+
+    expect(screen.getByRole('link', { name: 'Edit transaction TX100' })).toHaveAttribute('href', '/dashboard/transactions/1/edit?date=2026-10-31')
+  })
+
+  it('does not show edit controls to standard users', () => {
+    render(
+      <DashboardTransactions
+        transactions={mockPayments}
+        hasError={false}
+        timeZone='Asia/Manila'
+        selectedDate='2026-10-31'
+        userEmail='user@example.com'
+      />
+    )
+
+    expect(screen.queryByRole('link', { name: /edit transaction/i })).not.toBeInTheDocument()
+  })
+
+  it('shows creator identity before created time for balance managers in table view only', () => {
+    render(
+      <DashboardTransactions
+        transactions={mockPayments}
+        hasError={false}
+        timeZone='Asia/Manila'
+        selectedDate='2026-10-31'
+        userEmail='admin@example.com'
+        canManageBalances
+      />
+    )
+
+    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent)
+    expect(headers.indexOf('Created by')).toBe(headers.indexOf('Created date/time') - 1)
+    expect(screen.getAllByText('creator@example.com')).toHaveLength(2)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Card view' }))
+    expect(screen.queryByRole('columnheader', { name: 'Created by' })).not.toBeInTheDocument()
+  })
+
+  it('hides creator identity from users without balance management access', () => {
+    render(
+      <DashboardTransactions
+        transactions={mockPayments}
+        hasError={false}
+        timeZone='Asia/Manila'
+        selectedDate='2026-10-31'
+        userEmail='user@example.com'
+      />
+    )
+
+    expect(screen.queryByRole('columnheader', { name: 'Created by' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Created by')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Sort by')).not.toHaveTextContent('Created by')
+  })
+
+  it('filters and sorts by creator for balance managers', () => {
+    render(
+      <DashboardTransactions
+        transactions={mockPayments}
+        hasError={false}
+        timeZone='Asia/Manila'
+        selectedDate='2026-10-31'
+        userEmail='admin@example.com'
+        canManageBalances
+      />
+    )
+
+    const creatorFilter = screen.getByLabelText('Created by')
+    expect(within(creatorFilter).getByRole('option', { name: 'creator@example.com' })).toBeInTheDocument()
+    fireEvent.change(creatorFilter, { target: { value: 'creator@example.com' } })
+    expect(screen.getByText('TX100')).toBeInTheDocument()
+    expect(screen.queryByText('TX200')).not.toBeInTheDocument()
+
+    fireEvent.change(creatorFilter, { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'created_by' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sort ascending' }))
+    const transactionIds = screen.getAllByRole('row').slice(1).map((row) => row.textContent)
+    expect(transactionIds[0]).toContain('creator@example.com')
+    expect(transactionIds[1]).toContain('other-creator@example.com')
   })
 
   it('renders empty transactions state message when list is empty', () => {

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import BalancesPage from '@/app/balances/page'
 
-const { mockGetUser, mockBalanceOrder, mockPaymentLte } = vi.hoisted(() => ({
+const { mockGetUser, mockRoleQuery, mockBalanceOrder, mockPaymentLte } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
+  mockRoleQuery: vi.fn(),
   mockBalanceOrder: vi.fn(),
   mockPaymentLte: vi.fn(),
 }))
@@ -16,9 +17,11 @@ vi.mock('@supabase/ssr', () => ({
 
     return {
       auth: { getUser: mockGetUser },
-      from: (table: string) => table === 'balances'
-        ? { select: () => ({ eq: () => ({ order: mockBalanceOrder }) }) }
-        : { select: () => ({ gte: () => ({ lte: mockPaymentLte }) }) },
+      from: (table: string) => table === 'user_roles'
+        ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+        : table === 'balances'
+          ? { select: () => ({ eq: () => ({ order: mockBalanceOrder }) }) }
+          : { select: () => ({ gte: () => ({ lte: mockPaymentLte }) }) },
     }
   }),
 }))
@@ -29,6 +32,7 @@ describe('BalancesPage', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'publishable-key'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'test@example.com' } } })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'admin' }, error: null })
     mockBalanceOrder.mockResolvedValue({ data: [], error: null })
     mockPaymentLte.mockResolvedValue({ data: [], error: null })
   })
@@ -43,6 +47,12 @@ describe('BalancesPage', () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
 
     await expect(BalancesPage({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/login')
+  })
+
+  it('redirects users without admin or moderator role to the transaction dashboard', async () => {
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user' }, error: null })
+
+    await expect(BalancesPage({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/dashboard')
   })
 
   it('uses a valid selected date and starts both data queries', async () => {

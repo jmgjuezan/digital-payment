@@ -11,7 +11,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('opens type dropdown on focus and shows options', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
 
       expect(screen.getByRole('option', { name: 'GCash Cash-in' })).toBeInTheDocument()
@@ -20,7 +20,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('filters type options when user types', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.change(typeInput, { target: { value: 'Maya' } })
 
@@ -31,7 +31,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('shows no-match message when filter yields no results', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.change(typeInput, { target: { value: 'VISA' } })
 
@@ -41,7 +41,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('navigates type dropdown with ArrowDown key', () => {
       const { container } = render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.keyDown(typeInput, { key: 'ArrowDown' })
 
@@ -53,7 +53,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('navigates type dropdown with ArrowUp wrapping to last option', () => {
       const { container } = render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.keyDown(typeInput, { key: 'ArrowUp' })
 
@@ -65,7 +65,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('selects active type option with Enter key', () => {
       const { container } = render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i) as HTMLInputElement
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i }) as HTMLInputElement
       fireEvent.focus(typeInput)
       fireEvent.keyDown(typeInput, { key: 'ArrowDown' }) // activeIndex = 0 → GCash Cash-in
       fireEvent.keyDown(typeInput, { key: 'Enter' })
@@ -78,7 +78,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('closes type dropdown with Escape key', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       expect(screen.getAllByRole('option').length).toBeGreaterThan(0)
 
@@ -100,7 +100,7 @@ describe('NewTransactionForm — extended coverage', () => {
       render(<NewTransactionForm />)
 
       // Select a regular type first, enter an amount
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.click(screen.getByRole('option', { name: 'GCash Cash-in' }))
 
@@ -187,7 +187,7 @@ describe('NewTransactionForm — extended coverage', () => {
       render(<NewTransactionForm />)
 
       // Select a payment type first
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.click(screen.getByRole('option', { name: 'GCash Cash-in' }))
 
@@ -212,7 +212,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('clears charge when amount is cleared', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.click(screen.getByRole('option', { name: 'GCash Cash-in' }))
 
@@ -232,7 +232,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('marks transaction ID as required when type is not a Load type', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.click(screen.getByRole('option', { name: 'GCash Cash-in' }))
 
@@ -243,7 +243,7 @@ describe('NewTransactionForm — extended coverage', () => {
     it('marks transaction ID as optional for Load type', () => {
       render(<NewTransactionForm />)
 
-      const typeInput = screen.getByLabelText(/payment type/i)
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
       fireEvent.click(screen.getByRole('option', { name: 'GCash Load' }))
 

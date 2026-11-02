@@ -3,6 +3,7 @@ import { saveBalance } from '@/app/balances/new/actions'
 
 const mockRedirect = vi.fn()
 const mockGetUser = vi.fn()
+const mockRoleQuery = vi.fn()
 const mockInsert = vi.fn()
 
 vi.mock('next/navigation', () => ({
@@ -24,9 +25,9 @@ vi.mock('@supabase/ssr', () => ({
     auth: {
       getUser: mockGetUser,
     },
-    from: () => ({
-      insert: mockInsert,
-    }),
+    from: (table: string) => table === 'user_roles'
+      ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+      : { insert: mockInsert },
   })),
 }))
 
@@ -49,6 +50,7 @@ describe('saveBalance action', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-anon-key'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'admin' }, error: null })
     mockInsert.mockResolvedValue({ error: null })
   })
 
@@ -129,6 +131,18 @@ describe('saveBalance action', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/balances')
   })
 
+  it('returns to the selected balances date after saving', async () => {
+    const formData = new FormData()
+    formData.set('type', 'GCash')
+    formData.set('device', 'CP1')
+    formData.set('date', today)
+    formData.set('return_date', '2026-10-31')
+    formData.set('amount', '15000')
+
+    await expect(saveBalance({}, formData)).rejects.toThrow('NEXT_REDIRECT:/balances?date=2026-10-31')
+    expect(mockInsert).toHaveBeenCalledWith({ type: 'GCash', device: 'CP1', date: today, amount: 15000 })
+  })
+
   it('returns a configuration error when Supabase credentials are missing', async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL
     const formData = new FormData()
@@ -149,6 +163,18 @@ describe('saveBalance action', () => {
     formData.set('amount', '5000')
 
     await expect(saveBalance({}, formData)).rejects.toThrow('NEXT_REDIRECT:/login')
+  })
+
+  it('rejects balance saves from users without admin or moderator role', async () => {
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user' }, error: null })
+    const formData = new FormData()
+    formData.set('type', 'GCash')
+    formData.set('device', 'CP1')
+    formData.set('date', today)
+    formData.set('amount', '5000')
+
+    await expect(saveBalance({}, formData)).resolves.toEqual({ error: 'You do not have permission to manage balances.' })
+    expect(mockInsert).not.toHaveBeenCalled()
   })
 
   it('returns a database error when the insert fails', async () => {

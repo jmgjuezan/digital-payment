@@ -10,17 +10,23 @@ describe('SetBalanceForm Component', () => {
   it('renders all required form fields', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    expect(screen.getByLabelText(/balance type/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /balance type/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/device/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/amount/i)).toBeInTheDocument()
     // Date is readonly display
     expect(screen.getByLabelText(/date/i)).toBeInTheDocument()
   })
 
+  it('autofocuses the balance type field', () => {
+    render(<SetBalanceForm onActionChange={vi.fn()} />)
+
+    expect(screen.getByRole('combobox', { name: /balance type/i })).toHaveFocus()
+  })
+
   it('opens type dropdown and shows GCash and Maya options on focus', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i)
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i })
     fireEvent.focus(typeInput)
 
     expect(screen.getByRole('option', { name: 'GCash' })).toBeInTheDocument()
@@ -30,7 +36,7 @@ describe('SetBalanceForm Component', () => {
   it('selects a balance type when clicking a dropdown option', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i) as HTMLInputElement
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i }) as HTMLInputElement
     fireEvent.focus(typeInput)
     fireEvent.click(screen.getByRole('option', { name: 'GCash' }))
 
@@ -42,7 +48,7 @@ describe('SetBalanceForm Component', () => {
   it('filters balance type options based on typed query', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i)
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i })
     fireEvent.focus(typeInput)
     fireEvent.change(typeInput, { target: { value: 'May' } })
 
@@ -53,7 +59,7 @@ describe('SetBalanceForm Component', () => {
   it('shows no-match message when type filter has no results', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i)
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i })
     fireEvent.focus(typeInput)
     fireEvent.change(typeInput, { target: { value: 'VISA' } })
 
@@ -63,7 +69,7 @@ describe('SetBalanceForm Component', () => {
   it('navigates type dropdown with ArrowDown key', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i)
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i })
     fireEvent.focus(typeInput)
     fireEvent.keyDown(typeInput, { key: 'ArrowDown' })
 
@@ -74,7 +80,7 @@ describe('SetBalanceForm Component', () => {
   it('navigates type dropdown with ArrowUp key', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i)
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i })
     fireEvent.focus(typeInput)
     // ArrowUp from -1 wraps to last
     fireEvent.keyDown(typeInput, { key: 'ArrowUp' })
@@ -86,7 +92,7 @@ describe('SetBalanceForm Component', () => {
   it('selects active option with Enter key', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i) as HTMLInputElement
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i }) as HTMLInputElement
     fireEvent.focus(typeInput)
     fireEvent.keyDown(typeInput, { key: 'ArrowDown' })
     fireEvent.keyDown(typeInput, { key: 'Enter' })
@@ -97,7 +103,7 @@ describe('SetBalanceForm Component', () => {
   it('closes type dropdown with Escape key', () => {
     render(<SetBalanceForm onActionChange={vi.fn()} />)
 
-    const typeInput = screen.getByLabelText(/balance type/i)
+    const typeInput = screen.getByRole('combobox', { name: /balance type/i })
     fireEvent.focus(typeInput)
     expect(screen.getByRole('option', { name: 'GCash' })).toBeInTheDocument()
 

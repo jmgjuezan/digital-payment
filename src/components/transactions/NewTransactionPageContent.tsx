@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import BalanceRequiredDialog from '@/components/transactions/BalanceRequiredDialog'
 import NewTransactionForm from '@/components/transactions/NewTransactionForm'
+import { getUserRole } from '@/lib/balance-access'
 
 function getTodayInPaymentTimeZone() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -40,6 +41,8 @@ export default async function NewTransactionPageContent() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  const role = await getUserRole(supabase, user.id)
+  if (role !== 'admin' && role !== 'user') redirect('/dashboard')
 
   const { count, error } = await supabase
     .from('balances')
@@ -76,7 +79,7 @@ export default async function NewTransactionPageContent() {
           </div>
         </div>
         {requiresBalance ? (
-          <BalanceRequiredDialog open hasError={Boolean(error)} onClose={() => redirect('/dashboard')} />
+          <BalanceRequiredDialog open hasError={Boolean(error)} canManageBalances={role === 'admin'} onClose={() => redirect('/dashboard')} />
         ) : <NewTransactionForm />}
       </section>
     </main>

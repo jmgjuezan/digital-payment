@@ -3,6 +3,7 @@ import { createPayment } from '@/app/transactions/new/actions'
 
 const mockRedirect = vi.fn()
 const mockGetUser = vi.fn()
+const mockRoleQuery = vi.fn()
 const mockEq = vi.fn()
 const mockInsert = vi.fn()
 
@@ -26,6 +27,9 @@ vi.mock('@supabase/ssr', () => ({
       getUser: mockGetUser,
     },
     from: (table: string) => {
+      if (table === 'user_roles') {
+        return { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+      }
       if (table === 'balances') {
         return {
           select: () => ({
@@ -54,8 +58,8 @@ function getTodayInManila() {
 function getValidPaymentForm(overrides: Record<string, string> = {}) {
   const formData = new FormData()
   const fields = {
-    payment_date: todayForForm(),
-    date: '14:30:00',
+     date: todayForForm(),
+     time: '14:30:00',
     amount: '500',
     charge: '5',
     type: 'GCash Cash-in',
@@ -80,21 +84,28 @@ describe('createPayment action', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-anon-key'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user', email: 'user@example.com' }, error: null })
     mockEq.mockResolvedValue({ count: 1, error: null })
     mockInsert.mockResolvedValue({ error: null })
   })
 
   it('rejects invalid payment dates', async () => {
     const formData = new FormData()
-    formData.set('payment_date', 'not-a-date')
+      formData.set('date', 'not-a-date')
 
     const result = await createPayment({}, formData)
     expect(result).toEqual({ error: 'Enter a valid payment date.' })
   })
 
+  it('rejects calendar-invalid payment dates', async () => {
+    const formData = getValidPaymentForm({ date: '2026-02-30' })
+
+    expect(await createPayment({}, formData)).toEqual({ error: 'Enter a valid payment date.' })
+  })
+
   it('rejects dates that are not yesterday or today', async () => {
     const formData = new FormData()
-    formData.set('payment_date', '2020-01-01')
+      formData.set('date', '2020-01-01')
 
     const result = await createPayment({}, formData)
     expect(result).toEqual({ error: 'Payment date must be yesterday or today.' })
@@ -102,17 +113,23 @@ describe('createPayment action', () => {
 
   it('rejects missing payment time', async () => {
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '')
+      formData.set('date', today)
+      formData.set('time', '')
 
     const result = await createPayment({}, formData)
     expect(result).toEqual({ error: 'Enter the payment time.' })
   })
 
+  it('rejects time values that include a date or malformed time', async () => {
+    const result = await createPayment({}, getValidPaymentForm({ time: '2026-11-02T14:30' }))
+
+    expect(result).toEqual({ error: 'Enter a valid payment time.' })
+  })
+
   it('rejects non-positive amounts', async () => {
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '14:30:00')
+      formData.set('date', today)
+      formData.set('time', '14:30:00')
     formData.set('amount', '0')
 
     const result = await createPayment({}, formData)
@@ -121,8 +138,8 @@ describe('createPayment action', () => {
 
   it('requires a transaction ID for non-load payment types', async () => {
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '14:30:00')
+      formData.set('date', today)
+      formData.set('time', '14:30:00')
     formData.set('amount', '500')
     formData.set('type', 'GCash Cash-in')
     formData.set('tran_id', '')
@@ -133,8 +150,8 @@ describe('createPayment action', () => {
 
   it('allows load payment types without a transaction ID', async () => {
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '14:30:00')
+      formData.set('date', today)
+      formData.set('time', '14:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Load')
@@ -146,14 +163,24 @@ describe('createPayment action', () => {
       expect.objectContaining({
         type: 'GCash Load',
         tran_id: null,
+        created_by: 'user@example.com',
       })
     )
   })
 
+  it('does not save when the user_roles email is missing', async () => {
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user', email: null }, error: null })
+
+    await expect(createPayment({}, getValidPaymentForm())).resolves.toEqual({
+      error: 'Your email is missing from your user role record.',
+    })
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
   it('rejects transaction IDs longer than 4 characters', async () => {
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '14:30:00')
+    formData.set('date', today)
+    formData.set('time', '14:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -168,8 +195,8 @@ describe('createPayment action', () => {
     mockEq.mockResolvedValue({ count: 0, error: null })
 
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '14:30:00')
+    formData.set('date', today)
+    formData.set('time', '14:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -224,19 +251,28 @@ describe('createPayment action', () => {
     await expect(createPayment({}, getValidPaymentForm())).rejects.toThrow('NEXT_REDIRECT:/login')
   })
 
+  it('rejects transaction creation for moderators', async () => {
+    mockRoleQuery.mockResolvedValue({ data: { role: 'moderator' }, error: null })
+
+    await expect(createPayment({}, getValidPaymentForm())).resolves.toEqual({
+      error: 'You do not have permission to add transactions.',
+    })
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
   it('accepts yesterday as a payment date', async () => {
     const yesterday = new Date(`${today}T00:00:00Z`)
     yesterday.setUTCDate(yesterday.getUTCDate() - 1)
     const paymentDate = yesterday.toISOString().slice(0, 10)
 
-    await expect(createPayment({}, getValidPaymentForm({ payment_date: paymentDate }))).rejects.toThrow('NEXT_REDIRECT:/dashboard')
+    await expect(createPayment({}, getValidPaymentForm({ date: paymentDate }))).rejects.toThrow('NEXT_REDIRECT:/dashboard')
     expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ date: paymentDate }))
   })
 
   it('saves the transaction and redirects to /dashboard on success', async () => {
     const formData = new FormData()
-    formData.set('payment_date', today)
-    formData.set('date', '14:30:00')
+      formData.set('date', today)
+      formData.set('time', '14:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -247,6 +283,7 @@ describe('createPayment action', () => {
     await expect(createPayment({}, formData)).rejects.toThrow('NEXT_REDIRECT:/dashboard')
     expect(mockInsert).toHaveBeenCalledWith({
       type: 'GCash Cash-in',
+      created_by: 'user@example.com',
       tran_id: '9999',
       date: today,
       time: '14:30:00',
@@ -255,6 +292,8 @@ describe('createPayment action', () => {
       device: 'CP1',
       note: 'Customer payment',
     })
+    expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('payment_date')
+    expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('payment_time')
     expect(mockRedirect).toHaveBeenCalledWith('/dashboard')
   })
 })

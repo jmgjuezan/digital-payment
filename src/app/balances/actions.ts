@@ -3,6 +3,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { hasBalanceManagementAccess } from '@/lib/balance-access'
 
 function getTodayInPaymentTimeZone() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -45,6 +46,7 @@ export async function getBalancesForDate(date: string) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  if (!await hasBalanceManagementAccess(supabase, user.id)) redirect('/dashboard')
 
   const today = getTodayInPaymentTimeZone()
   const [{ data: balances, error }, { data: payments, error: paymentError }] = await Promise.all([

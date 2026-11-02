@@ -24,7 +24,7 @@ describe('AppActionFooter — extended coverage', () => {
 
   describe('balances view', () => {
     it('renders Add balance link and Transactions navigation link', () => {
-      render(<AppActionFooter current='balances' />)
+      render(<AppActionFooter current='balances' canManageBalances />)
 
       expect(screen.getByRole('link', { name: /add balance/i })).toHaveAttribute('href', '/balances/new')
       expect(screen.getByRole('link', { name: /transactions/i })).toHaveAttribute('href', '/dashboard')
@@ -34,6 +34,12 @@ describe('AppActionFooter — extended coverage', () => {
       render(<AppActionFooter current='balances' />)
 
       expect(screen.queryByRole('button', { name: /add transaction/i })).not.toBeInTheDocument()
+    })
+
+    it('hides Add balance link without balance management access', () => {
+      render(<AppActionFooter current='balances' />)
+
+      expect(screen.queryByRole('link', { name: /add balance/i })).not.toBeInTheDocument()
     })
   })
 
@@ -47,7 +53,7 @@ describe('AppActionFooter — extended coverage', () => {
         hasError: false,
       })
 
-      const { unmount } = render(<AppActionFooter current='transactions' userKey='cached-user' />)
+      const { unmount } = render(<AppActionFooter current='transactions' userKey='cached-user' canAddTransactions />)
       fireEvent.click(screen.getByRole('button', { name: /add transaction/i }))
 
       await waitFor(() => {
@@ -58,7 +64,7 @@ describe('AppActionFooter — extended coverage', () => {
 
       // Second render — same userKey/date should be cached in the module-level Set
       vi.mocked(dashboardActions.checkTodayBalance).mockClear()
-      render(<AppActionFooter current='transactions' userKey='cached-user' />)
+      render(<AppActionFooter current='transactions' userKey='cached-user' canAddTransactions />)
       fireEvent.click(screen.getByRole('button', { name: /add transaction/i }))
 
       // Should navigate immediately without calling checkTodayBalance again
@@ -72,7 +78,7 @@ describe('AppActionFooter — extended coverage', () => {
         hasError: false,
       })
 
-      render(<AppActionFooter current='transactions' userKey='no-balance-user' />)
+      render(<AppActionFooter current='transactions' userKey='no-balance-user' canAddTransactions />)
       fireEvent.click(screen.getByRole('button', { name: /add transaction/i }))
 
       await waitFor(() => {
@@ -86,7 +92,7 @@ describe('AppActionFooter — extended coverage', () => {
         hasError: true,
       })
 
-      render(<AppActionFooter current='transactions' userKey='error-user' />)
+      render(<AppActionFooter current='transactions' userKey='error-user' canAddTransactions />)
       fireEvent.click(screen.getByRole('button', { name: /add transaction/i }))
 
       await waitFor(() => {
@@ -96,9 +102,15 @@ describe('AppActionFooter — extended coverage', () => {
     })
 
     it('renders Balances navigation link on transactions view', () => {
-      render(<AppActionFooter current='transactions' />)
+      render(<AppActionFooter current='transactions' canManageBalances />)
 
       expect(screen.getByRole('link', { name: /balances/i })).toHaveAttribute('href', '/balances')
+    })
+
+    it('hides Balances navigation link without balance management access', () => {
+      render(<AppActionFooter current='transactions' canAddTransactions />)
+
+      expect(screen.queryByRole('link', { name: /balances/i })).not.toBeInTheDocument()
     })
   })
 })

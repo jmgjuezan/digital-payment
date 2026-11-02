@@ -8,10 +8,12 @@ import { WalletCards } from 'lucide-react'
 export default function BalanceRequiredDialog({
   open,
   hasError,
+  canManageBalances = false,
   onClose,
 }: {
   open: boolean
   hasError: boolean
+  canManageBalances?: boolean
   onClose: () => void
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -37,13 +39,19 @@ export default function BalanceRequiredDialog({
         <h2 id='balance-required-title'>Add today&apos;s balance first</h2>
         <p>
           {hasError
-            ? 'Today’s balance could not be verified. Add the balance before adding a transaction.'
-            : 'A balance must be added today before adding a transaction.'}
+            ? canManageBalances
+              ? 'Today’s balance could not be verified. Add the balance before adding a transaction.'
+              : 'Today’s balance could not be verified. Ask an admin or moderator to add today’s balance before adding a transaction.'
+            : canManageBalances
+              ? 'A balance must be added today before adding a transaction.'
+              : 'A balance must be added today before adding a transaction. Ask an admin or moderator to add it.'}
         </p>
         <div className='balance-required-actions'>
-          <Link className='add-transaction-button' href='/balances/new'>
-            Add balance
-          </Link>
+          {canManageBalances && (
+            <Link className='add-transaction-button' href='/balances/new'>
+              Add balance
+            </Link>
+          )}
           <button
             className='balance-cancel-button'
             type='button'

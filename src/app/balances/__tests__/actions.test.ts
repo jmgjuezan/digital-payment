@@ -3,6 +3,7 @@ import { getBalancesForDate } from '@/app/balances/actions'
 
 const mockRedirect = vi.fn()
 const mockGetUser = vi.fn()
+const mockRoleQuery = vi.fn()
 const mockBalancesSelect = vi.fn()
 const mockPaymentsSelect = vi.fn()
 
@@ -26,6 +27,9 @@ vi.mock('@supabase/ssr', () => ({
       getUser: mockGetUser,
     },
     from: (table: string) => {
+      if (table === 'user_roles') {
+        return { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+      }
       if (table === 'balances') {
         return {
           select: mockBalancesSelect,
@@ -57,6 +61,7 @@ describe('getBalancesForDate action', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-anon-key'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'moderator' }, error: null })
   })
 
   it('rejects invalid date formats', async () => {
@@ -95,6 +100,13 @@ describe('getBalancesForDate action', () => {
 
     await expect(getBalancesForDate(today)).rejects.toThrow('NEXT_REDIRECT:/login')
     expect(mockRedirect).toHaveBeenCalledWith('/login')
+  })
+
+  it('redirects users without admin or moderator role away from balances', async () => {
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user' }, error: null })
+
+    await expect(getBalancesForDate(today)).rejects.toThrow('NEXT_REDIRECT:/dashboard')
+    expect(mockRedirect).toHaveBeenCalledWith('/dashboard')
   })
 
   it('fetches and returns balances and payments correctly', async () => {

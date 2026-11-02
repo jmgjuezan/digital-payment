@@ -4,8 +4,9 @@ import NewTransactionPage from '@/app/transactions/new/page'
 import NewTransactionPageContent from '@/components/transactions/NewTransactionPageContent'
 import NewTransactionPageSkeleton from '@/components/transactions/NewTransactionPageSkeleton'
 
-const { mockGetUser, mockEq } = vi.hoisted(() => ({
+const { mockGetUser, mockRoleQuery, mockEq } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
+  mockRoleQuery: vi.fn(),
   mockEq: vi.fn(),
 }))
 
@@ -20,7 +21,9 @@ vi.mock('@supabase/ssr', () => ({
     config.cookies.setAll([{ name: 'sb-test', value: 'test', options: {} }])
     return {
       auth: { getUser: mockGetUser },
-      from: () => ({ select: () => ({ eq: mockEq }) }),
+      from: (table: string) => table === 'user_roles'
+        ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
+        : { select: () => ({ eq: mockEq }) },
     }
   }),
 }))
@@ -38,6 +41,7 @@ describe('NewTransactionPage', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'publishable-key'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'test@example.com' } } })
+    mockRoleQuery.mockResolvedValue({ data: { role: 'user' }, error: null })
   })
 
   it('redirects when Supabase is not configured', async () => {
@@ -50,6 +54,12 @@ describe('NewTransactionPage', () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
 
     await expect(NewTransactionPageContent()).rejects.toThrow('NEXT_REDIRECT:/login')
+  })
+
+  it('redirects moderators away from add transaction', async () => {
+    mockRoleQuery.mockResolvedValue({ data: { role: 'moderator' }, error: null })
+
+    await expect(NewTransactionPageContent()).rejects.toThrow('NEXT_REDIRECT:/dashboard')
   })
 
   it('requires a balance when no balance is recorded today', async () => {

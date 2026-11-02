@@ -11,7 +11,7 @@ describe('SetBalanceFormWrapper Component', () => {
     render(<SetBalanceFormWrapper />)
 
     // Form field from SetBalanceForm
-    expect(screen.getByLabelText(/balance type/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /balance type/i })).toBeInTheDocument()
     // Footer from AddBalanceFooter
     expect(screen.getByRole('button', { name: /save balance/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /cancel/i })).toBeInTheDocument()

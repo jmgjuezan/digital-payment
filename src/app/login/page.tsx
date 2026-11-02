@@ -3,7 +3,12 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import AuthForm from '@/components/auth/AuthForm'
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; 'password-updated'?: string }>
+}) {
+  const query = await searchParams
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
@@ -25,7 +30,7 @@ export default async function LoginPage() {
     })
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) redirect('/dashboard')
+    if (user && !query['password-updated'] && !query.error) redirect('/dashboard')
   }
 
   return (
@@ -50,6 +55,8 @@ export default async function LoginPage() {
           <span className='form-eyebrow'>Welcome back</span>
           <h2 id='login-title'>Sign in to Digital Payment</h2>
           <p className='login-subtitle'>Access your payment activity and pick up right where you left off.</p>
+          {query['password-updated'] === 'true' && <p className='auth-form-success' role='status'>Password updated. Sign in with your new password.</p>}
+          {query.error === 'recovery-link-invalid' && <p className='auth-form-error' role='alert'>This password reset link is invalid or expired. Request a new one.</p>}
           <AuthForm supabaseUrl={supabaseUrl} supabasePublishableKey={supabasePublishableKey} />
           <p className='login-legal'>
             By continuing, you agree to our <a href='/terms'>Terms</a> and <a href='/privacy'>Privacy Policy</a>.

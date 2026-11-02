@@ -45,9 +45,15 @@ function cacheBalance(cacheKey: string) {
 export default function AppActionFooter({
   current,
   userKey,
+  canManageBalances = false,
+  canAddTransactions = false,
+  selectedDate,
 }: {
   current: 'transactions' | 'balances'
   userKey?: string
+  canManageBalances?: boolean
+  canAddTransactions?: boolean
+  selectedDate?: string
 }) {
   const [isCheckingBalance, startBalanceCheck] = useTransition()
   const [showBalanceRequired, setShowBalanceRequired] = useState(false)
@@ -78,7 +84,7 @@ export default function AppActionFooter({
     <>
       <nav className='app-action-footer' aria-label='Primary actions'>
         <div className='app-action-footer-inner'>
-          {current === 'transactions' && (
+          {current === 'transactions' && canAddTransactions && (
             <button
               className='add-transaction-button'
               type='button'
@@ -89,24 +95,28 @@ export default function AppActionFooter({
               <span>{isCheckingBalance ? 'Checking…' : 'Add transaction'}</span>
             </button>
           )}
-          {current === 'balances' && (
-            <Link className='add-transaction-button' href='/balances/new'>
+          {current === 'balances' && canManageBalances && (
+            <Link
+              className='add-transaction-button'
+              href={selectedDate ? `/balances/new?date=${encodeURIComponent(selectedDate)}` : '/balances/new'}
+            >
               <Plus size={18} aria-hidden='true' />
               <span>Add balance</span>
             </Link>
           )}
-          {current === 'transactions' ? (
+          {current === 'transactions' && canManageBalances && (
             <a
               className='set-balance-button'
-              href='/balances'
+              href={selectedDate ? `/balances?date=${encodeURIComponent(selectedDate)}` : '/balances'}
             >
               <WalletCards size={18} aria-hidden='true' />
               <span>Balances</span>
             </a>
-          ) : (
+          )}
+          {current === 'balances' && (
             <a
               className='set-balance-button'
-              href='/dashboard'
+              href={selectedDate ? `/dashboard?date=${encodeURIComponent(selectedDate)}` : '/dashboard'}
             >
               <ReceiptText size={18} aria-hidden='true' />
               <span>Transactions</span>
@@ -117,6 +127,7 @@ export default function AppActionFooter({
       <BalanceRequiredDialog
         open={showBalanceRequired}
         hasError={balanceCheckError}
+        canManageBalances={canManageBalances}
         onClose={() => setShowBalanceRequired(false)}
       />
     </>

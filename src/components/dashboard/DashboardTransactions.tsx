@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, CalendarDays, Check, Copy, LayoutGrid, List, LogOut, ReceiptText, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarDays, Check, Copy, LayoutGrid, List, LogOut, Pencil, ReceiptText, X } from 'lucide-react'
+import Link from 'next/link'
 import { getTransactionsForDate } from '@/app/dashboard/actions'
 import AppActionFooter from '@/components/layout/AppActionFooter'
 
@@ -10,11 +11,12 @@ export type Payment = {
   created_at: string
   type: string
   tran_id: string | null
-  payment_date: string
-  date: string | null
+  date: string
+  time: string | null
   charge: number
   amount: number
   device: string
+  created_by?: string | null
   note: string | null
 }
 
@@ -22,9 +24,11 @@ type SortField = keyof Payment
 type SortDirection = 'asc' | 'desc'
 type ViewMode = 'table' | 'cards'
 
+const creatorField: { value: SortField; label: string } = { value: 'created_by', label: 'Created by' }
+
 const paymentFields: { value: SortField; label: string }[] = [
-  { value: 'payment_date', label: 'Payment date' },
-  { value: 'date', label: 'Payment time' },
+  { value: 'date', label: 'Payment date' },
+  { value: 'time', label: 'Payment time' },
   { value: 'type', label: 'Type' },
   { value: 'device', label: 'Device' },
   { value: 'amount', label: 'Amount' },
@@ -35,9 +39,9 @@ const paymentFields: { value: SortField; label: string }[] = [
 ]
 
 const sortFields = paymentFields.filter(
-  (field) => field.value !== 'note',
+  (field) => field.value !== 'note' && field.value !== 'date',
 )
-const cardFieldOrder: SortField[] = ['payment_date', 'date', 'amount', 'charge', 'device', 'tran_id', 'created_at', 'note']
+const cardFieldOrder: SortField[] = ['date', 'time', 'amount', 'charge', 'device', 'tran_id', 'created_at', 'note']
 const cardFields = paymentFields
   .filter((field) => field.value !== 'type')
   .sort((first, second) => cardFieldOrder.indexOf(first.value) - cardFieldOrder.indexOf(second.value))
@@ -100,7 +104,7 @@ function displayValue(field: SortField, payment: Payment, timeZone: string) {
       hour12: true,
     }).format(new Date(String(value)))
   }
-  if (field === 'date') {
+  if (field === 'time') {
     const [hours, minutes, seconds = 0] = String(value).split(':').map(Number)
     const paymentTime = new Date(2000, 0, 1, hours, minutes, seconds)
 
@@ -157,22 +161,30 @@ export default function DashboardTransactions({
   timeZone,
   selectedDate: initialSelectedDate,
   userEmail,
+  canManageBalances = false,
+  canAddTransactions = false,
 }: {
   transactions: Payment[]
   hasError: boolean
   timeZone: string
   selectedDate: string
   userEmail: string
+  canManageBalances?: boolean
+  canAddTransactions?: boolean
 }) {
+  const tableFields = canManageBalances
+    ? paymentFields.flatMap((field) => field.value === 'created_at' ? [creatorField, field] : [field])
+    : paymentFields
   const [transactions, setTransactions] = useState(initialTransactions)
   const [hasError, setHasError] = useState(initialHasError)
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
   const [isDateLoading, setIsDateLoading] = useState(false)
-  const [sortField, setSortField] = useState<SortField>('date')
+  const [sortField, setSortField] = useState<SortField>('time')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [typeFilter, setTypeFilter] = useState('')
   const [deviceFilter, setDeviceFilter] = useState('')
+  const [creatorFilter, setCreatorFilter] = useState('')
   const [totalCopyStatus, setTotalCopyStatus] = useState<'copied' | 'failed' | ''>('')
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
   const summaryDialogRef = useRef<HTMLDialogElement>(null)
@@ -198,9 +210,16 @@ export default function DashboardTransactions({
     () => [...new Set(transactions.map((payment) => payment.device).filter(Boolean))].sort((first, second) => first.localeCompare(second, undefined, { numeric: true })),
     [transactions],
   )
+  const creators = useMemo(
+    () => [...new Set(transactions.map((payment) => payment.created_by).filter((creator): creator is string => Boolean(creator)))].sort((first, second) => first.localeCompare(second, undefined, { sensitivity: 'base' })),
+    [transactions],
+  )
+  const availableSortFields = canManageBalances ? [...sortFields, creatorField] : sortFields
   const filteredTransactions = useMemo(
-    () => transactions.filter((payment) => (!typeFilter || payment.type === typeFilter) && (!deviceFilter || payment.device === deviceFilter)),
-    [transactions, typeFilter, deviceFilter],
+    () => transactions.filter((payment) => (!typeFilter || payment.type === typeFilter)
+      && (!deviceFilter || payment.device === deviceFilter)
+      && (!creatorFilter || payment.created_by === creatorFilter)),
+    [transactions, typeFilter, deviceFilter, creatorFilter],
   )
 
   async function handleDateChange(date: string) {
@@ -211,6 +230,7 @@ export default function DashboardTransactions({
     setHasError(false)
     setTypeFilter('')
     setDeviceFilter('')
+    setCreatorFilter('')
     summaryDialogRef.current?.close()
     const requestId = ++dateRequestId.current
     window.history.replaceState(null, '', `/dashboard?date=${encodeURIComponent(date)}`)
@@ -460,10 +480,19 @@ export default function DashboardTransactions({
                 {devices.map((device) => <option key={device} value={device}>{device}</option>)}
               </select>
             </label>
+            {canManageBalances && (
+              <label className='transaction-filter-control'>
+                <span>Created by</span>
+                <select value={creatorFilter} onChange={(event) => setCreatorFilter(event.target.value)} disabled={isDateLoading}>
+                  <option value=''>All creators</option>
+                  {creators.map((creator) => <option key={creator} value={creator}>{creator}</option>)}
+                </select>
+              </label>
+            )}
             <label className='sort-control'>
               <span>Sort by</span>
               <select value={sortField} onChange={(event) => setSortField(event.target.value as SortField)}>
-                {sortFields.map((field) => <option key={field.value} value={field.value}>{field.label}</option>)}
+                {availableSortFields.map((field) => <option key={field.value} value={field.value}>{field.label}</option>)}
               </select>
             </label>
             <button
@@ -508,25 +537,38 @@ export default function DashboardTransactions({
         ) : sortedTransactions.length === 0 ? (
           <div className='transactions-empty'>
             <span className='empty-icon'><ReceiptText size={22} aria-hidden='true' /></span>
-            <strong>{typeFilter || deviceFilter ? 'No transactions match these filters' : 'No transactions recorded on this date'}</strong>
-            <span>{typeFilter || deviceFilter ? 'Choose a different payment type or device.' : 'Payments recorded for this date will appear here.'}</span>
+            <strong>{typeFilter || deviceFilter || creatorFilter ? 'No transactions match these filters' : 'No transactions recorded on this date'}</strong>
+            <span>{typeFilter || deviceFilter || creatorFilter ? 'Choose different filter values.' : 'Payments recorded for this date will appear here.'}</span>
           </div>
         ) : viewMode === 'table' ? (
           <div className='transactions-table-scroll'>
             <table className='transactions-table'>
               <thead>
                 <tr>
-                  {paymentFields.map((field) => <th key={field.value} scope='col'>{field.label}</th>)}
+                  {tableFields.map((field) => <th key={field.value} scope='col'>{field.label}</th>)}
+                  {canManageBalances && <th scope='col'>Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {sortedTransactions.map((payment) => (
                   <tr key={payment.id}>
-                    {paymentFields.map((field) => (
+                    {tableFields.map((field) => (
                       <td key={field.value} className={field.value === 'amount' ? 'amount-cell' : undefined}>
                         {displayValue(field.value, payment, timeZone)}
                       </td>
                     ))}
+                    {canManageBalances && (
+                      <td>
+                        <Link
+                          className='icon-control'
+                          href={`/dashboard/transactions/${payment.id}/edit?date=${encodeURIComponent(selectedDate)}`}
+                          aria-label={`Edit transaction ${payment.tran_id || payment.id}`}
+                          title='Edit transaction'
+                        >
+                          <Pencil size={16} aria-hidden='true' />
+                        </Link>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -554,7 +596,13 @@ export default function DashboardTransactions({
           </div>
         )}
       </section>
-      <AppActionFooter current='transactions' userKey={userEmail} />
+      <AppActionFooter
+        current='transactions'
+        userKey={userEmail}
+        canManageBalances={canManageBalances}
+        canAddTransactions={canAddTransactions}
+        selectedDate={selectedDate}
+      />
     </main>
   )
 }
