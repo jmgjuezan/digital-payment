@@ -21,6 +21,15 @@ function getTodayInPaymentTimeZone() {
   return `${values.year}-${values.month}-${values.day}`
 }
 
+function getCurrentTimeInPaymentTimeZone() {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: paymentTimeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date())
+}
+
 function getYesterdayInPaymentTimeZone() {
   const yesterday = new Date(`${getTodayInPaymentTimeZone()}T00:00:00Z`)
   yesterday.setUTCDate(yesterday.getUTCDate() - 1)
@@ -41,6 +50,7 @@ export default function NewTransactionForm() {
   const [deviceSelectionError, setDeviceSelectionError] = useState(false)
   const [paymentDate, setPaymentDate] = useState(getTodayInPaymentTimeZone)
   const [paymentTime, setPaymentTime] = useState('')
+  const [currentPaymentTime, setCurrentPaymentTime] = useState('')
   const [amount, setAmount] = useState('')
   const [charge, setCharge] = useState('')
   const [transactionId, setTransactionId] = useState('')
@@ -63,6 +73,15 @@ export default function NewTransactionForm() {
   const filteredDevices = deviceOptions.filter((option) =>
     option.toLowerCase().includes(deviceQuery.trim().toLowerCase()),
   )
+
+  useEffect(() => {
+    const now = getCurrentTimeInPaymentTimeZone()
+    setCurrentPaymentTime(now)
+    setPaymentTime((currentPaymentTime) => currentPaymentTime || now)
+    const intervalId = window.setInterval(() => setCurrentPaymentTime(getCurrentTimeInPaymentTimeZone()), 30_000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
 
   useEffect(() => {
     const dialog = savingDialogRef.current
@@ -311,14 +330,33 @@ export default function NewTransactionForm() {
           value={paymentDate}
           onChange={(event) => {
             const selectedDate = event.target.value
-            setPaymentDate(selectedDate && selectedDate < yesterday ? yesterday : selectedDate > today ? today : selectedDate)
+            const nextPaymentDate = selectedDate && selectedDate < yesterday ? yesterday : selectedDate > today ? today : selectedDate
+            const now = getCurrentTimeInPaymentTimeZone()
+            setCurrentPaymentTime(now)
+            setPaymentDate(nextPaymentDate)
+            if (nextPaymentDate === today && paymentTime > now) setPaymentTime(now)
           }}
           required
         />
       </div>
       <div className='form-field'>
         <label htmlFor='time'>Payment time <span aria-hidden='true'>*</span></label>
-        <input id='time' name='time' type='time' tabIndex={5} value={paymentTime} onChange={(event) => setPaymentTime(event.target.value)} required />
+        <input
+          id='time'
+          name='time'
+          type='time'
+          tabIndex={5}
+          max={paymentDate === today ? currentPaymentTime : undefined}
+          value={paymentTime}
+          onFocus={() => setCurrentPaymentTime(getCurrentTimeInPaymentTimeZone())}
+          onChange={(event) => {
+            const now = getCurrentTimeInPaymentTimeZone()
+            const selectedTime = event.target.value
+            setCurrentPaymentTime(now)
+            setPaymentTime(paymentDate === today && selectedTime > now ? now : selectedTime)
+          }}
+          required
+        />
       </div>
       <div className='form-field amount-charge-field'>
         <label htmlFor='amount'>Amount <span aria-hidden='true'>*</span></label>
@@ -407,6 +445,7 @@ export default function NewTransactionForm() {
           required={transactionIdRequired}
           value={transactionId}
           onChange={(event) => setTransactionId(event.target.value)}
+          autoComplete='off'
         />
       </div>
       <div className='form-field form-field-wide'>

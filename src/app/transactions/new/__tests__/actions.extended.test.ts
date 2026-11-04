@@ -45,7 +45,7 @@ function makeFormData(overrides: Record<string, string | number> = {}) {
     type: 'GCash Cash-in',
     tran_id: 'AB12',
     date: today,
-    time: '10:00',
+    time: '00:00',
     device: 'CP1',
     note: '',
     amount: '500',

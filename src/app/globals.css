@@ -302,9 +302,8 @@ button, a, input { font: inherit; }
 .charge-help-container { position: relative; height: 16px; }
 .charge-help-container.is-open { z-index: 2; }
 .field-label-row { position: relative; display: inline-flex; width: fit-content; height: 16px; align-items: center; }
-.charge-help-button { position: absolute; top: 50%; left: calc(100% + 4px); display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; transform: translateY(-50%); border: 0; border-radius: 8px; background: transparent; color: #52675a; cursor: pointer; }
-.charge-help-button:hover, .charge-help-button:focus-visible { background: #edf3ee; color: #1f6b4e; }
-.charge-help-button:focus-visible { outline: 2px solid #1f6b4e; outline-offset: 1px; }
+.charge-help-button { position: absolute; top: 50%; left: 75%; display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; transform: translateY(-50%); border: 0; border-radius: 8px; background: transparent; color: #52675a; cursor: pointer; }
+.charge-help-button:focus-visible { background: #edf3ee; color: #1f6b4e; outline: 2px solid #1f6b4e; outline-offset: 1px; }
 .charge-help-tooltip { position: absolute; top: calc(100% + 4px); left: 0; z-index: 10; display: block; width: min(320px, calc(100vw - 48px)); padding: 10px 12px; border: 1px solid #dce4dc; border-radius: 8px; background: #fff; color: #34473c; font-size: 12px; line-height: 1.5; box-shadow: 0 8px 20px rgb(23 44 37 / 10%); }
 .field-hint { color: #76827a; font-size: 11px; line-height: 1.4; }
 .form-field label span { color: #be5b43; }

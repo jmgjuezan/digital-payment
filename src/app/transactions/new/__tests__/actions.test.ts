@@ -59,7 +59,7 @@ function getValidPaymentForm(overrides: Record<string, string> = {}) {
   const formData = new FormData()
   const fields = {
      date: todayForForm(),
-     time: '14:30:00',
+     time: '00:30:00',
     amount: '500',
     charge: '5',
     type: 'GCash Cash-in',
@@ -126,10 +126,22 @@ describe('createPayment action', () => {
     expect(result).toEqual({ error: 'Enter a valid payment time.' })
   })
 
+  it('rejects payment times later than now when the payment date is today', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(`${today}T04:00:00.000Z`))
+
+    try {
+      const result = await createPayment({}, getValidPaymentForm({ time: '12:01' }))
+      expect(result).toEqual({ error: 'Payment time cannot be later than the current time.' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('rejects non-positive amounts', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '14:30:00')
+      formData.set('time', '00:30:00')
     formData.set('amount', '0')
 
     const result = await createPayment({}, formData)
@@ -139,7 +151,7 @@ describe('createPayment action', () => {
   it('requires a transaction ID for non-load payment types', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '14:30:00')
+      formData.set('time', '00:30:00')
     formData.set('amount', '500')
     formData.set('type', 'GCash Cash-in')
     formData.set('tran_id', '')
@@ -151,7 +163,7 @@ describe('createPayment action', () => {
   it('allows load payment types without a transaction ID', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '14:30:00')
+      formData.set('time', '00:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Load')
@@ -163,24 +175,25 @@ describe('createPayment action', () => {
       expect.objectContaining({
         type: 'GCash Load',
         tran_id: null,
-        created_by: 'user@example.com',
       })
     )
   })
 
-  it('does not save when the user_roles email is missing', async () => {
+  it('omits database-generated fields from the payment insert', async () => {
     mockRoleQuery.mockResolvedValue({ data: { role: 'user', email: null }, error: null })
 
-    await expect(createPayment({}, getValidPaymentForm())).resolves.toEqual({
-      error: 'Your email is missing from your user role record.',
-    })
-    expect(mockInsert).not.toHaveBeenCalled()
+    await expect(createPayment({}, getValidPaymentForm())).rejects.toThrow('NEXT_REDIRECT:/dashboard')
+    expect(mockInsert).toHaveBeenCalledWith(expect.not.objectContaining({
+      id: expect.anything(),
+      created_at: expect.anything(),
+      created_by: expect.anything(),
+    }))
   })
 
   it('rejects transaction IDs longer than 4 characters', async () => {
     const formData = new FormData()
     formData.set('date', today)
-    formData.set('time', '14:30:00')
+    formData.set('time', '00:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -196,7 +209,7 @@ describe('createPayment action', () => {
 
     const formData = new FormData()
     formData.set('date', today)
-    formData.set('time', '14:30:00')
+    formData.set('time', '00:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -272,7 +285,7 @@ describe('createPayment action', () => {
   it('saves the transaction and redirects to /dashboard on success', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '14:30:00')
+      formData.set('time', '00:30:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -283,15 +296,17 @@ describe('createPayment action', () => {
     await expect(createPayment({}, formData)).rejects.toThrow('NEXT_REDIRECT:/dashboard')
     expect(mockInsert).toHaveBeenCalledWith({
       type: 'GCash Cash-in',
-      created_by: 'user@example.com',
       tran_id: '9999',
       date: today,
-      time: '14:30:00',
+      time: '00:30:00',
       charge: 5,
       amount: 500,
       device: 'CP1',
       note: 'Customer payment',
     })
+    expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('id')
+    expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('created_at')
+    expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('created_by')
     expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('payment_date')
     expect(mockInsert.mock.calls[0][0]).not.toHaveProperty('payment_time')
     expect(mockRedirect).toHaveBeenCalledWith('/dashboard')

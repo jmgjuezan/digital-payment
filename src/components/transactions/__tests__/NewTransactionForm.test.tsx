@@ -54,6 +54,50 @@ describe('NewTransactionForm Component', () => {
     expect(dateInput.value).toBe(dateInput.min)
   })
 
+  it('limits payment time to the current time for today and removes the limit for yesterday', () => {
+    render(<NewTransactionForm />)
+
+    const dateInput = screen.getByLabelText(/payment date/i) as HTMLInputElement
+    const timeInput = screen.getByLabelText(/payment time/i) as HTMLInputElement
+    expect(timeInput.max).toMatch(/^\d{2}:\d{2}$/)
+
+    fireEvent.change(dateInput, { target: { value: dateInput.min } })
+    expect(timeInput.max).toBe('')
+
+    fireEvent.change(dateInput, { target: { value: dateInput.max } })
+    expect(timeInput.max).toMatch(/^\d{2}:\d{2}$/)
+  })
+
+  it('clamps a selected future payment time to the current Manila time', () => {
+    vi.useFakeTimers()
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+    vi.setSystemTime(new Date(`${today}T04:00:00.000Z`))
+    const { unmount } = render(<NewTransactionForm />)
+
+    try {
+      const timeInput = screen.getByLabelText(/payment time/i) as HTMLInputElement
+      fireEvent.change(timeInput, { target: { value: '12:01' } })
+      expect(timeInput.value).toBe('12:00')
+    } finally {
+      unmount()
+      vi.useRealTimers()
+    }
+  })
+
+  it('defaults payment time to the current Manila time', () => {
+    vi.useFakeTimers()
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+    vi.setSystemTime(new Date(`${today}T04:00:00.000Z`))
+    const { unmount } = render(<NewTransactionForm />)
+
+    try {
+      expect(screen.getByLabelText(/payment time/i)).toHaveValue('12:00')
+    } finally {
+      unmount()
+      vi.useRealTimers()
+    }
+  })
+
   it('shows charge guidance and closes it on button toggle or outside press', () => {
     render(<NewTransactionForm />)
 

@@ -28,6 +28,15 @@ function getYesterdayInPaymentTimeZone() {
   return yesterday.toISOString().slice(0, 10)
 }
 
+function getCurrentTimeInPaymentTimeZone() {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date())
+}
+
 export async function createPayment(_previousState: CreatePaymentState, formData: FormData): Promise<CreatePaymentState> {
   const type = String(formData.get('type') ?? '').trim()
   const tranId = String(formData.get('tran_id') ?? '').trim()
@@ -50,6 +59,9 @@ export async function createPayment(_previousState: CreatePaymentState, formData
   }
   if (!paymentTime) return { error: 'Enter the payment time.' }
   if (!validPaymentTime) return { error: 'Enter a valid payment time.' }
+  if (paymentDate === getTodayInPaymentTimeZone() && paymentTime.slice(0, 5) > getCurrentTimeInPaymentTimeZone()) {
+    return { error: 'Payment time cannot be later than the current time.' }
+  }
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Amount must be greater than zero.' }
 
   if (type && !type.endsWith('Load') && !tranId) return { error: 'Transaction ID is required for this payment type.' }
