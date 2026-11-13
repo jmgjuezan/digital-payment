@@ -90,8 +90,20 @@ export async function updatePayment(paymentId: number, formData: FormData, retur
     return { error: 'Could not verify the current time. Please try again.' }
   }
   if (paymentDate > today) return { error: 'Enter a valid transaction date.' }
+  const role = await getUserRole(supabase, user.id)
   if (!await hasBalanceManagementAccess(supabase, user.id)) {
     return { error: 'You do not have permission to edit transactions.' }
+  }
+
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('created_by')
+    .eq('id', paymentId)
+    .single()
+
+  if (!payment) return { error: 'Transaction not found.' }
+  if (role !== 'admin' && payment.created_by !== user.id) {
+    return { error: 'You can only edit your own transactions.' }
   }
 
   const { error } = await supabase

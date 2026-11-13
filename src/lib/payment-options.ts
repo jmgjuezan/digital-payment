@@ -35,3 +35,38 @@ export const paymentTypeOptions = [
   'UnoBank Cash-in',
   'UnoBank Cash-out',
 ] as const
+
+export function getPaymentTypesForDevice(device: string): readonly string[] {
+  if (device === 'ME') {
+    return paymentTypeOptions
+  }
+
+  if (device === 'CP2') {
+    return [
+      'GCash Cash-in',
+      'GCash Cash-out',
+      'GCash Load',
+      'Maya Cash-in',
+      'Maya Cash-out',
+      'Maya Load',
+    ] as const
+  }
+
+  if (device === 'CP4') {
+    return [
+      'GCash Cash-in',
+      'GCash Cash-out',
+      'GCash Load',
+      'Maribank Cash-in',
+      'MariBank Cash-out',
+      'Maribank Load',
+    ] as const
+  }
+
+  // CP1, CP3, CP5, CP6, CP7, CP8 - only GCash
+  return [
+    'GCash Cash-in',
+    'GCash Cash-out',
+    'GCash Load',
+  ] as const
+}

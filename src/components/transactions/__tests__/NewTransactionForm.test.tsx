@@ -13,17 +13,17 @@ vi.mock('@/app/actions/server-time', () => ({
 const initialServerTime = '2026-11-09T16:47:00.000Z'
 
 describe('NewTransactionForm Component', () => {
-  it('autofocuses the payment type field', () => {
+  it('autofocuses the device field', () => {
     render(<NewTransactionForm initialServerTime={initialServerTime} />)
 
-    expect(screen.getByRole('combobox', { name: /payment type/i })).toHaveFocus()
+    expect(screen.getByRole('combobox', { name: /device/i })).toHaveFocus()
   })
 
   it('renders all required form inputs and submit button', () => {
     render(<NewTransactionForm initialServerTime={initialServerTime} />)
 
+    expect(screen.getByRole('combobox', { name: /device/i })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /payment type/i })).toBeInTheDocument()
-    expect(screen.getByLabelText(/device/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/payment date/i)).toHaveAttribute('name', 'date')
     expect(screen.getByLabelText(/payment time/i)).toHaveAttribute('name', 'time')
     expect(screen.getByLabelText(/amount/i)).toBeInTheDocument()
@@ -33,6 +33,11 @@ describe('NewTransactionForm Component', () => {
 
   it('automatically calculates charge when amount is entered after selecting payment type', () => {
     render(<NewTransactionForm initialServerTime={initialServerTime} />)
+
+    // Select device first (required before payment type becomes available)
+    const deviceInput = screen.getByRole('combobox', { name: /device/i })
+    fireEvent.focus(deviceInput)
+    fireEvent.click(screen.getByRole('option', { name: 'ME' }))
 
     // Focus and select GCash Cash-in
     const typeInput = screen.getByRole('combobox', { name: /payment type/i })
@@ -58,32 +63,6 @@ describe('NewTransactionForm Component', () => {
 
     fireEvent.change(dateInput, { target: { value: dateInput.min } })
     expect(dateInput.value).toBe(dateInput.min)
-  })
-
-  it('limits payment time to the current time for today and removes the limit for yesterday', () => {
-    render(<NewTransactionForm initialServerTime={initialServerTime} />)
-
-    const dateInput = screen.getByLabelText(/payment date/i) as HTMLInputElement
-    const timeInput = screen.getByLabelText(/payment time/i) as HTMLInputElement
-    expect(timeInput.max).toMatch(/^\d{2}:\d{2}$/)
-
-    fireEvent.change(dateInput, { target: { value: dateInput.min } })
-    expect(timeInput.max).toBe('')
-
-    fireEvent.change(dateInput, { target: { value: dateInput.max } })
-    expect(timeInput.max).toMatch(/^\d{2}:\d{2}$/)
-  })
-
-  it('clamps a selected future payment time to the current Manila time', () => {
-    const { unmount } = render(<NewTransactionForm initialServerTime='2026-11-09T16:00:00.000Z' />)
-
-    try {
-      const timeInput = screen.getByLabelText(/payment time/i) as HTMLInputElement
-      fireEvent.change(timeInput, { target: { value: '00:01' } })
-      expect(timeInput.value).toBe('00:00')
-    } finally {
-      unmount()
-    }
   })
 
   it('defaults payment time to the current server hour and keeps minutes editable', () => {

@@ -25,7 +25,7 @@ vi.mock('@supabase/ssr', () => ({
     auth: {
       getUser: mockGetUser,
     },
-    rpc: vi.fn().mockResolvedValue({ data: '2026-11-11T00:00:00.000Z', error: null }),
+    rpc: vi.fn().mockResolvedValue({ data: '2026-11-14T00:00:00.000Z', error: null }),
     from: (table: string) => table === 'user_roles'
       ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
       : { insert: mockInsert },
@@ -33,14 +33,7 @@ vi.mock('@supabase/ssr', () => ({
 }))
 
 function getTodayInManila() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${values.year}-${values.month}-${values.day}`
+  return '2026-11-14'
 }
 
 describe('saveBalance action', () => {

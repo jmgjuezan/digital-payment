@@ -23,24 +23,30 @@ describe('AppActionFooter', () => {
     window.sessionStorage.clear()
   })
 
-  it('renders navigation link and add transaction button on transactions view', () => {
+  it('renders navigation link and add transaction button on transactions view', async () => {
     render(<AppActionFooter current='transactions' userKey='footer-nav-tx' canManageBalances canAddTransactions selectedDate='2026-10-31' />)
 
-    expect(screen.getByRole('link', { name: /balances/i })).toHaveAttribute('href', '/balances?date=2026-10-31')
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /balances/i })).toHaveAttribute('href', '/balances?date=2026-10-31')
+    })
     expect(screen.getByRole('button', { name: /add transaction/i })).toBeInTheDocument()
   })
 
-  it('renders navigation link and add balance button on balances view', () => {
+  it('renders navigation link and add balance button on balances view', async () => {
     render(<AppActionFooter current='balances' userKey='footer-nav-bal' canManageBalances />)
 
-    expect(screen.getByRole('link', { name: /transactions/i })).toHaveAttribute('href', '/dashboard')
-    expect(screen.getByRole('link', { name: /add balance/i })).toHaveAttribute('href', '/balances/new')
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /transactions/i })).toHaveAttribute('href', '/dashboard')
+      expect(screen.getByRole('link', { name: /add balance/i })).toHaveAttribute('href', '/balances/new')
+    })
   })
 
-  it('passes the selected date to the add balance page', () => {
+  it('passes the selected date to the add balance page', async () => {
     render(<AppActionFooter current='balances' userKey='footer-date' canManageBalances selectedDate='2026-10-31' />)
 
-    expect(screen.getByRole('link', { name: /add balance/i })).toHaveAttribute('href', '/balances/new?date=2026-10-31')
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /add balance/i })).toHaveAttribute('href', '/balances/new?date=2026-10-31')
+    })
   })
 
   it('hides balance navigation from users without balance management access', () => {

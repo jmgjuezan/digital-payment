@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, ReceiptText, WalletCards } from 'lucide-react'
@@ -30,6 +30,12 @@ function cacheBalance(cacheKey: string) {
   }
 }
 
+function getDateFromURL(): string | null {
+  if (typeof window === 'undefined') return null
+  const params = new URLSearchParams(window.location.search)
+  return params.get('date')
+}
+
 export default function AppActionFooter({
   current,
   userKey,
@@ -48,12 +54,41 @@ export default function AppActionFooter({
   const [isCheckingBalance, startBalanceCheck] = useTransition()
   const [showBalanceRequired, setShowBalanceRequired] = useState(false)
   const [balanceCheckError, setBalanceCheckError] = useState(false)
+  const [currentDate, setCurrentDate] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
 
+  useEffect(() => {
+    setIsMounted(true)
+    setCurrentDate(getDateFromURL() || selectedDate || null)
+  }, [])
+
+  useEffect(() => {
+    if (!isMounted) return
+    const handlePopState = () => setCurrentDate(getDateFromURL() || selectedDate || null)
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [isMounted, selectedDate])
+
+  useEffect(() => {
+    if (!isMounted) return
+    setCurrentDate(getDateFromURL() || selectedDate || null)
+  }, [selectedDate, isMounted])
+
+  useEffect(() => {
+    if (!isMounted) return
+    const handleDateChange = (event: CustomEvent<{ date: string }>) => {
+      setCurrentDate(event.detail.date)
+    }
+    window.addEventListener('datechange', handleDateChange as EventListener)
+    return () => window.removeEventListener('datechange', handleDateChange as EventListener)
+  }, [isMounted])
+
   function handleAddTransaction() {
-    const cacheKey = `${userKey ?? 'user'}:${today ?? selectedDate ?? ''}`
+    const date = currentDate || selectedDate || today
+    const cacheKey = `${userKey ?? 'user'}:${today ?? date ?? ''}`
     if (hasCachedBalance(cacheKey)) {
-      router.push('/transactions/new')
+      router.push(`/transactions/new${date ? `?date=${encodeURIComponent(date)}` : ''}`)
       return
     }
 
@@ -61,7 +96,7 @@ export default function AppActionFooter({
       const result = await checkTodayBalance()
       if (result.hasBalance) {
         cacheBalance(cacheKey)
-        router.push('/transactions/new')
+        router.push(`/transactions/new${date ? `?date=${encodeURIComponent(date)}` : ''}`)
         return
       }
 
@@ -88,7 +123,7 @@ export default function AppActionFooter({
           {current === 'balances' && canManageBalances && (
             <Link
               className='add-transaction-button'
-              href={selectedDate ? `/balances/new?date=${encodeURIComponent(selectedDate)}` : '/balances/new'}
+              href={currentDate ? `/balances/new?date=${encodeURIComponent(currentDate)}` : '/balances/new'}
             >
               <Plus size={18} aria-hidden='true' />
               <span>Add balance</span>
@@ -97,7 +132,7 @@ export default function AppActionFooter({
           {current === 'transactions' && canManageBalances && (
             <a
               className='set-balance-button'
-              href={selectedDate ? `/balances?date=${encodeURIComponent(selectedDate)}` : '/balances'}
+              href={currentDate ? `/balances?date=${encodeURIComponent(currentDate)}` : '/balances'}
             >
               <WalletCards size={18} aria-hidden='true' />
               <span>Balances</span>
@@ -106,7 +141,7 @@ export default function AppActionFooter({
           {current === 'balances' && (
             <a
               className='set-balance-button'
-              href={selectedDate ? `/dashboard?date=${encodeURIComponent(selectedDate)}` : '/dashboard'}
+              href={currentDate ? `/dashboard?date=${encodeURIComponent(currentDate)}` : '/dashboard'}
             >
               <ReceiptText size={18} aria-hidden='true' />
               <span>Transactions</span>

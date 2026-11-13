@@ -103,6 +103,7 @@ export default function BalanceRecords({
     setHasPaymentError(false)
     const requestId = ++dateRequestId.current
     window.history.replaceState(null, '', `/balances?date=${encodeURIComponent(date)}`)
+    window.dispatchEvent(new CustomEvent('datechange', { detail: { date } }))
 
     try {
       const result = await getBalancesForDate(date)

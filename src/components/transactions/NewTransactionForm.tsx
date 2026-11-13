@@ -5,7 +5,7 @@ import { CircleHelp } from 'lucide-react'
 import { createPayment, type CreatePaymentState } from '@/app/transactions/new/actions'
 import { getCurrentServerTime } from '@/app/actions/server-time'
 import { calculatePaymentCharge } from '@/lib/payment-charge'
-import { paymentTypeOptions } from '@/lib/payment-options'
+import { getPaymentTypesForDevice } from '@/lib/payment-options'
 import { getTimeInPaymentTimeZone, getTodayInPaymentTimeZone, getYesterdayInPaymentTimeZone } from '@/lib/server-time'
 
 const initialState: CreatePaymentState = {}
@@ -43,7 +43,8 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
   const paymentTypeInputRef = useRef<HTMLInputElement>(null)
   const deviceInputRef = useRef<HTMLInputElement>(null)
   const deviceOptions = [...Array.from({ length: 8 }, (_, index) => `CP${index + 1}`), 'ME']
-  const filteredPaymentTypes = paymentTypeOptions.filter((option) =>
+  const availablePaymentTypes = device ? getPaymentTypesForDevice(device) : []
+  const filteredPaymentTypes = availablePaymentTypes.filter((option) =>
     option.toLowerCase().includes(paymentTypeQuery.trim().toLowerCase()),
   )
   const filteredDevices = deviceOptions.filter((option) =>
@@ -148,6 +149,19 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
     setDeviceMenuOpen(false)
     setActiveDeviceIndex(-1)
     setDeviceSelectionError(false)
+
+    // Clear payment type if it's not available for the new device
+    const availableTypes = getPaymentTypesForDevice(nextDevice)
+    if (paymentType && !availableTypes.includes(paymentType)) {
+      setPaymentType('')
+      setPaymentTypeQuery('')
+      setCharge('')
+    }
+
+    // Auto-select payment type if there's only one option
+    if (availableTypes.length === 1) {
+      selectPaymentType(availableTypes[0])
+    }
   }
 
   function handleDeviceKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -260,9 +274,10 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
           aria-controls='payment-type-options'
           aria-activedescendant={paymentTypeMenuOpen && activePaymentTypeIndex >= 0 ? `payment-type-option-${activePaymentTypeIndex}` : undefined}
           aria-describedby={paymentTypeSelectionError ? 'payment-type-error' : undefined}
+          disabled={!device}
           required
           autoComplete='off'
-          placeholder='Search payment type'
+          placeholder={device ? 'Search payment type' : 'Select a device first'}
           value={paymentTypeQuery}
           onFocus={() => setPaymentTypeMenuOpen(true)}
           onBlur={() => setPaymentTypeMenuOpen(false)}
@@ -326,12 +341,10 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
           name='time'
           type='time'
           tabIndex={5}
-          max={paymentDate === today ? currentPaymentTime : undefined}
           value={paymentTime}
           onFocus={() => void refreshServerTime()}
           onChange={(event) => {
-            const selectedTime = event.target.value
-            setPaymentTime(paymentDate === today && selectedTime > currentPaymentTime ? currentPaymentTime : selectedTime)
+            setPaymentTime(event.target.value)
           }}
           required
         />

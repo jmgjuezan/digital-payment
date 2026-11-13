@@ -224,6 +224,7 @@ export default function DashboardTransactions({
     summaryDialogRef.current?.close()
     const requestId = ++dateRequestId.current
     window.history.replaceState(null, '', `/dashboard?date=${encodeURIComponent(date)}`)
+    window.dispatchEvent(new CustomEvent('datechange', { detail: { date } }))
 
     try {
       const result = await getTransactionsForDate(date)

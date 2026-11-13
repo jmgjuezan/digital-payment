@@ -16,6 +16,7 @@
 - **Scope Limits**: Keep Git diffs tightly contained to the requested feature. Do not refactor unrelated files.
 - **Safety**: Do not install new third-party packages or update `package.json` without asking first.
 - **Supabase Secrets and Local State**: Never commit credentials, service-role or secret keys, or generated local Supabase state. Keep `supabase/.temp/` and `supabase/.branches/` ignored; commit only intentional Supabase configuration, migrations, and seed files. Before committing, inspect the staged file list and diff for environment files, generated runtime files, and secrets.
+- **Security**: Follow security standards in [SECURITY.md](SECURITY.md) for authentication, authorization, input validation, and data access. Implement resource-level authorization for write operations to ensure users can only modify their own data (except admins).
 
 ## UI: Mobile-first
 Design and implement every screen for phones first (320px–430px), then scale up. This app is used on the device that owns the wallet (GCash, Maya, or bank).
