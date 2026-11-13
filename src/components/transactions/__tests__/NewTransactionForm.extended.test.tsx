@@ -6,10 +6,14 @@ vi.mock('@/app/transactions/new/actions', () => ({
   createPayment: vi.fn(),
 }))
 
+vi.mock('@/app/actions/server-time', () => ({
+  getCurrentServerTime: vi.fn().mockResolvedValue('2026-11-09T16:47:00.000Z'),
+}))
+
 describe('NewTransactionForm — extended coverage', () => {
   describe('payment type combobox', () => {
     it('opens type dropdown on focus and shows options', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -18,7 +22,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('filters type options when user types', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -29,7 +33,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('shows no-match message when filter yields no results', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -39,7 +43,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('navigates type dropdown with ArrowDown key', () => {
-      const { container } = render(<NewTransactionForm />)
+      const { container } = render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -51,7 +55,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('navigates type dropdown with ArrowUp wrapping to last option', () => {
-      const { container } = render(<NewTransactionForm />)
+      const { container } = render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -63,7 +67,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('selects active type option with Enter key', () => {
-      const { container } = render(<NewTransactionForm />)
+      const { container } = render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i }) as HTMLInputElement
       fireEvent.focus(typeInput)
@@ -76,7 +80,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('closes type dropdown with Escape key', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -87,7 +91,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('shows selection error when submitting without choosing a type', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const form = document.getElementById('new-transaction-form') as HTMLFormElement
       fireEvent.submit(form)
@@ -97,7 +101,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('clears charge when a Load payment type is selected', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       // Select a regular type first, enter an amount
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
@@ -119,7 +123,7 @@ describe('NewTransactionForm — extended coverage', () => {
 
   describe('device combobox', () => {
     it('opens device dropdown on focus', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const deviceInput = screen.getByLabelText(/device/i)
       fireEvent.focus(deviceInput)
@@ -129,7 +133,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('filters device options when user types', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const deviceInput = screen.getByLabelText(/device/i)
       fireEvent.focus(deviceInput)
@@ -140,7 +144,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('shows no-match message when device filter has no results', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const deviceInput = screen.getByLabelText(/device/i)
       fireEvent.focus(deviceInput)
@@ -150,7 +154,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('selects device with Enter key when active', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const deviceInput = screen.getByLabelText(/device/i) as HTMLInputElement
       fireEvent.focus(deviceInput)
@@ -161,7 +165,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('closes device dropdown with Escape key', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const deviceInput = screen.getByLabelText(/device/i)
       fireEvent.focus(deviceInput)
@@ -172,7 +176,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('navigates device list with ArrowUp wrapping to last option', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const deviceInput = screen.getByLabelText(/device/i)
       fireEvent.focus(deviceInput)
@@ -184,7 +188,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('shows device selection error when submitting with type but no device', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       // Select a payment type first
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
@@ -200,7 +204,7 @@ describe('NewTransactionForm — extended coverage', () => {
 
   describe('amount field', () => {
     it('prevents negative sign key from being entered', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const amountInput = screen.getByLabelText(/^amount/i)
       const event = fireEvent.keyDown(amountInput, { key: '-' })
@@ -210,7 +214,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('clears charge when amount is cleared', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -230,7 +234,7 @@ describe('NewTransactionForm — extended coverage', () => {
 
   describe('transaction ID field', () => {
     it('marks transaction ID as required when type is not a Load type', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)
@@ -241,7 +245,7 @@ describe('NewTransactionForm — extended coverage', () => {
     })
 
     it('marks transaction ID as optional for Load type', () => {
-      render(<NewTransactionForm />)
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
 
       const typeInput = screen.getByRole('combobox', { name: /payment type/i })
       fireEvent.focus(typeInput)

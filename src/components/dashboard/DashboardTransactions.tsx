@@ -143,18 +143,6 @@ function formatSelectedDate(date: string, timeZone: string) {
   }).format(new Date(Date.UTC(year, month - 1, day, 12)))
 }
 
-function getTodayInTimeZone(timeZone: string) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
 export default function DashboardTransactions({
   transactions: initialTransactions,
   hasError: initialHasError,
@@ -163,6 +151,7 @@ export default function DashboardTransactions({
   userEmail,
   canManageBalances = false,
   canAddTransactions = false,
+  today: serverToday,
 }: {
   transactions: Payment[]
   hasError: boolean
@@ -171,6 +160,7 @@ export default function DashboardTransactions({
   userEmail: string
   canManageBalances?: boolean
   canAddTransactions?: boolean
+  today?: string
 }) {
   const tableFields = canManageBalances
     ? paymentFields.flatMap((field) => field.value === 'created_at' ? [creatorField, field] : [field])
@@ -189,7 +179,7 @@ export default function DashboardTransactions({
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
   const summaryDialogRef = useRef<HTMLDialogElement>(null)
   const dateRequestId = useRef(0)
-  const today = getTodayInTimeZone(timeZone)
+  const today = serverToday ?? initialSelectedDate
 
   useEffect(() => {
     if (!isSummaryDialogOpen) return
@@ -602,6 +592,7 @@ export default function DashboardTransactions({
         canManageBalances={canManageBalances}
         canAddTransactions={canAddTransactions}
         selectedDate={selectedDate}
+        today={today}
       />
     </main>
   )

@@ -21,6 +21,7 @@ vi.mock('next/headers', () => ({
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
     auth: { getUser: mockGetUser },
+    rpc: vi.fn().mockResolvedValue({ data: '2026-11-11T00:00:00.000Z', error: null }),
     from: (table: string) => table === 'user_roles'
       ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
       : { update: mockUpdate },

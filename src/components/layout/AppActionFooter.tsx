@@ -10,18 +10,6 @@ import BalanceRequiredDialog from '@/components/transactions/BalanceRequiredDial
 const daysWithBalance = new Set<string>()
 const balanceCachePrefix = 'digital-payment:has-balance:'
 
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
 function hasCachedBalance(cacheKey: string) {
   if (daysWithBalance.has(cacheKey)) return true
 
@@ -48,12 +36,14 @@ export default function AppActionFooter({
   canManageBalances = false,
   canAddTransactions = false,
   selectedDate,
+  today,
 }: {
   current: 'transactions' | 'balances'
   userKey?: string
   canManageBalances?: boolean
   canAddTransactions?: boolean
   selectedDate?: string
+  today?: string
 }) {
   const [isCheckingBalance, startBalanceCheck] = useTransition()
   const [showBalanceRequired, setShowBalanceRequired] = useState(false)
@@ -61,7 +51,7 @@ export default function AppActionFooter({
   const router = useRouter()
 
   function handleAddTransaction() {
-    const cacheKey = `${userKey ?? 'user'}:${getTodayInPaymentTimeZone()}`
+    const cacheKey = `${userKey ?? 'user'}:${today ?? selectedDate ?? ''}`
     if (hasCachedBalance(cacheKey)) {
       router.push('/transactions/new')
       return

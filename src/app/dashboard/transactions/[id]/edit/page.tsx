@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import EditTransactionForm from '@/components/dashboard/EditTransactionForm'
 import type { Payment } from '@/components/dashboard/DashboardTransactions'
 import { hasBalanceManagementAccess } from '@/lib/balance-access'
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export const metadata: Metadata = {
   title: 'Edit transaction | Digital Payment',
@@ -21,10 +22,6 @@ export default async function EditTransactionPage({
   const { id } = await params
   const paymentId = Number(id)
   const { date: requestedDate } = await searchParams
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
-  const returnDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today
-    ? requestedDate
-    : undefined
   if (!Number.isSafeInteger(paymentId) || paymentId <= 0) redirect('/dashboard')
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -50,6 +47,10 @@ export default async function EditTransactionPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   if (!await hasBalanceManagementAccess(supabase, user.id)) redirect('/dashboard')
+  const today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  const returnDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today
+    ? requestedDate
+    : undefined
 
   const { data, error } = await supabase
     .from('payments')
@@ -87,7 +88,7 @@ export default async function EditTransactionPage({
             <p>{payment.tran_id ? `Transaction ${payment.tran_id}` : `Transaction ${payment.id}`}</p>
           </div>
         </div>
-        <EditTransactionForm payment={payment} returnDate={returnDate} />
+        <EditTransactionForm payment={payment} returnDate={returnDate} today={today} />
       </section>
       <nav className='app-action-footer' aria-label='Form actions'>
         <div className='app-action-footer-inner'>

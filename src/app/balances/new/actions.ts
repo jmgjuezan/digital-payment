@@ -4,22 +4,11 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { hasBalanceManagementAccess } from '@/lib/balance-access'
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export type SaveBalanceState = {
   error?: string
   success?: boolean
-}
-
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
 }
 
 export async function saveBalance(_previousState: SaveBalanceState, formData: FormData): Promise<SaveBalanceState> {
@@ -33,7 +22,6 @@ export async function saveBalance(_previousState: SaveBalanceState, formData: Fo
   if (!['gcash', 'maya'].includes(type.toLowerCase())) return { error: 'Balance type must be GCash or Maya.' }
   if (!validDevices.includes(device)) return { error: 'Select a valid device.' }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: 'Enter a valid balance date.' }
-  if (date !== getTodayInPaymentTimeZone()) return { error: 'Balance date must be today.' }
   if (!Number.isFinite(amount) || amount < 0) return { error: 'Balance must be zero or greater.' }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -61,12 +49,19 @@ export async function saveBalance(_previousState: SaveBalanceState, formData: Fo
   if (!await hasBalanceManagementAccess(supabase, user.id)) {
     return { error: 'You do not have permission to manage balances.' }
   }
+  let today: string
+  try {
+    today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  } catch {
+    return { error: 'Could not verify the current time. Please try again.' }
+  }
+  if (date !== today) return { error: 'Balance date must be today.' }
 
   const { error } = await supabase.from('balances').insert({ type, device, date, amount })
   if (error?.code === '23505') return { error: 'Duplicate transaction.' }
   if (error) return { error: 'Could not save the balance. Check your access and try again.' }
 
   const validReturnDate = /^\d{4}-\d{2}-\d{2}$/.test(returnDate)
-    && returnDate <= getTodayInPaymentTimeZone()
+    && returnDate <= today
   redirect(validReturnDate ? `/balances?date=${encodeURIComponent(returnDate)}` : '/balances')
 }

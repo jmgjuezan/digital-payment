@@ -25,6 +25,7 @@ vi.mock('@supabase/ssr', () => ({
     auth: {
       getUser: mockGetUser,
     },
+    rpc: vi.fn().mockResolvedValue({ data: '2026-11-11T00:00:00.000Z', error: null }),
     from: (table: string) => table === 'user_roles'
       ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
       : { insert: mockInsert },
@@ -84,7 +85,7 @@ describe('saveBalance action', () => {
     formData.set('amount', '5000')
 
     const result = await saveBalance({}, formData)
-    expect(result).toEqual({ error: 'Balance date must be today.' })
+    expect(result.error).toBe('Balance date must be today.')
   })
 
   it('rejects malformed dates and non-numeric amounts', async () => {
@@ -185,7 +186,8 @@ describe('saveBalance action', () => {
     formData.set('date', today)
     formData.set('amount', '5000')
 
-    expect(await saveBalance({}, formData)).toEqual({ error: 'Could not save the balance. Check your access and try again.' })
+    const result = await saveBalance({}, formData)
+    expect(result.error).toBe('Could not save the balance. Check your access and try again.')
   })
 
   it('returns a duplicate transaction message for unique constraint violations', async () => {
@@ -196,6 +198,7 @@ describe('saveBalance action', () => {
     formData.set('amount', '5000')
     mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate key value' } })
 
-    expect(await saveBalance({}, formData)).toEqual({ error: 'Duplicate transaction.' })
+    const result = await saveBalance({}, formData)
+    expect(result.error).toBe('Duplicate transaction.')
   })
 })

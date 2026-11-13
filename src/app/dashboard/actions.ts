@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getUserRole, hasBalanceManagementAccess, resolvePaymentCreatorEmails } from '@/lib/balance-access'
 import { paymentTypeOptions } from '@/lib/payment-options'
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export type UpdatePaymentState = {
   error?: string
@@ -41,12 +42,10 @@ export async function updatePayment(paymentId: number, formData: FormData, retur
   const charge = Number(formData.get('charge'))
   const note = String(formData.get('note') ?? '').trim()
   const validDevices = [...Array.from({ length: 8 }, (_, index) => `CP${index + 1}`), 'ME']
-  const today = getTodayInPaymentTimeZone()
   const parsedPaymentDate = new Date(`${paymentDate}T00:00:00Z`)
   const validPaymentDate = /^\d{4}-\d{2}-\d{2}$/.test(paymentDate)
     && !Number.isNaN(parsedPaymentDate.getTime())
     && parsedPaymentDate.toISOString().slice(0, 10) === paymentDate
-    && paymentDate <= today
 
   if (!Number.isSafeInteger(paymentId) || paymentId <= 0) return { error: 'Invalid transaction.' }
   if (!paymentTypeOptions.includes(type as (typeof paymentTypeOptions)[number])
@@ -84,6 +83,13 @@ export async function updatePayment(paymentId: number, formData: FormData, retur
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  let today: string
+  try {
+    today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  } catch {
+    return { error: 'Could not verify the current time. Please try again.' }
+  }
+  if (paymentDate > today) return { error: 'Enter a valid transaction date.' }
   if (!await hasBalanceManagementAccess(supabase, user.id)) {
     return { error: 'You do not have permission to edit transactions.' }
   }
@@ -112,18 +118,6 @@ export async function updatePayment(paymentId: number, formData: FormData, retur
   }
 }
 
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
 export async function checkTodayBalance(): Promise<TodayBalanceCheck> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -147,17 +141,23 @@ export async function checkTodayBalance(): Promise<TodayBalanceCheck> {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  let today: string
+  try {
+    today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  } catch {
+    return { hasBalance: false, hasError: true }
+  }
 
   const { count, error } = await supabase
     .from('balances')
     .select('id', { count: 'exact', head: true })
-    .eq('date', getTodayInPaymentTimeZone())
+    .eq('date', today)
 
   return { hasBalance: !error && Boolean(count), hasError: Boolean(error) }
 }
 
 export async function getTransactionsForDate(date: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > getTodayInPaymentTimeZone()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { transactions: [], hasError: true }
   }
 
@@ -183,6 +183,13 @@ export async function getTransactionsForDate(date: string) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  let today: string
+  try {
+    today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  } catch {
+    return { transactions: [], hasError: true }
+  }
+  if (date > today) return { transactions: [], hasError: true }
   const role = await getUserRole(supabase, user.id)
   const includeCreator = role === 'admin' || role === 'moderator'
   const transactionFields = includeCreator

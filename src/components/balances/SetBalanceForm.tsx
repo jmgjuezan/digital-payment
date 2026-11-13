@@ -7,24 +7,14 @@ const initialState: SaveBalanceState = {}
 const balanceTypes = ['GCash', 'Maya']
 const balanceDevices = Array.from({ length: 8 }, (_, index) => `CP${index + 1}`)
 
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
 export default function SetBalanceForm({
   onActionChange,
   returnDate,
+  today = '',
 }: {
   onActionChange: (submit: () => void, pending: boolean) => void
   returnDate?: string
+  today?: string
 }) {
   const [state, action, pending] = useActionState(saveBalance, initialState)
   const formRef = useRef<HTMLFormElement>(null)
@@ -33,7 +23,6 @@ export default function SetBalanceForm({
   const typeInputRef = useRef<HTMLInputElement>(null)
   const deviceInputRef = useRef<HTMLInputElement>(null)
   const submitForm = useCallback(() => formRef.current?.requestSubmit(), [])
-  const today = getTodayInPaymentTimeZone()
   const [amount, setAmount] = useState('')
   const [balanceType, setBalanceType] = useState('')
   const [balanceTypeQuery, setBalanceTypeQuery] = useState('')

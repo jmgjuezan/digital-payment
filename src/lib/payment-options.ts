@@ -19,6 +19,7 @@ export const paymentTypeOptions = [
   'Maribank Load',
   'Maya Cash-in',
   'Maya Cash-out',
+  'Maya Load',
   'Metrobank Cash-in',
   'Metrobank Cash-out',
   'PNB Cash-in',

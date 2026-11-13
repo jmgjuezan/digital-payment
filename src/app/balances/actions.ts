@@ -4,21 +4,10 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { hasBalanceManagementAccess } from '@/lib/balance-access'
-
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export async function getBalancesForDate(date: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > getTodayInPaymentTimeZone()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { balances: [], payments: [], hasError: true, hasPaymentError: true }
   }
 
@@ -48,7 +37,13 @@ export async function getBalancesForDate(date: string) {
   if (!user) redirect('/login')
   if (!await hasBalanceManagementAccess(supabase, user.id)) redirect('/dashboard')
 
-  const today = getTodayInPaymentTimeZone()
+  let today: string
+  try {
+    today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  } catch {
+    return { balances: [], payments: [], hasError: true, hasPaymentError: true }
+  }
+  if (date > today) return { balances: [], payments: [], hasError: true, hasPaymentError: true }
   const [{ data: balances, error }, { data: payments, error: paymentError }] = await Promise.all([
     supabase
       .from('balances')

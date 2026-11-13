@@ -5,36 +5,10 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { paymentTypeOptions } from '@/lib/payment-options'
 import { getUserRoleDetails } from '@/lib/balance-access'
+import { getServerTime, getTimeInPaymentTimeZone, getTodayInPaymentTimeZone, getYesterdayInPaymentTimeZone } from '@/lib/server-time'
 
 export type CreatePaymentState = {
   error?: string
-}
-
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
-function getYesterdayInPaymentTimeZone() {
-  const yesterday = new Date(`${getTodayInPaymentTimeZone()}T00:00:00Z`)
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-  return yesterday.toISOString().slice(0, 10)
-}
-
-function getCurrentTimeInPaymentTimeZone() {
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Manila',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date())
 }
 
 export async function createPayment(_previousState: CreatePaymentState, formData: FormData): Promise<CreatePaymentState> {
@@ -54,14 +28,8 @@ export async function createPayment(_previousState: CreatePaymentState, formData
   const validPaymentTime = /^\d{2}:\d{2}(?::\d{2})?$/.test(paymentTime)
 
   if (!validPaymentDate) return { error: 'Enter a valid payment date.' }
-  if (paymentDate < getYesterdayInPaymentTimeZone() || paymentDate > getTodayInPaymentTimeZone()) {
-    return { error: 'Payment date must be yesterday or today.' }
-  }
   if (!paymentTime) return { error: 'Enter the payment time.' }
   if (!validPaymentTime) return { error: 'Enter a valid payment time.' }
-  if (paymentDate === getTodayInPaymentTimeZone() && paymentTime.slice(0, 5) > getCurrentTimeInPaymentTimeZone()) {
-    return { error: 'Payment time cannot be later than the current time.' }
-  }
   if (!Number.isFinite(amount) || amount <= 0) return { error: 'Amount must be greater than zero.' }
 
   if (type && !type.endsWith('Load') && !tranId) return { error: 'Transaction ID is required for this payment type.' }
@@ -94,6 +62,19 @@ export async function createPayment(_previousState: CreatePaymentState, formData
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  let serverTime: Date
+  try {
+    serverTime = await getServerTime(supabase)
+  } catch {
+    return { error: 'Could not verify the current time. Please try again.' }
+  }
+  const today = getTodayInPaymentTimeZone(serverTime)
+  if (paymentDate < getYesterdayInPaymentTimeZone(serverTime) || paymentDate > today) {
+    return { error: 'Payment date must be yesterday or today.' }
+  }
+  if (paymentDate === today && paymentTime.slice(0, 5) > getTimeInPaymentTimeZone(serverTime)) {
+    return { error: 'Payment time cannot be later than the current time.' }
+  }
   const userRole = await getUserRoleDetails(supabase, user.id)
   if (userRole?.role !== 'admin' && userRole?.role !== 'user') {
     return { error: 'You do not have permission to add transactions.' }
@@ -102,7 +83,7 @@ export async function createPayment(_previousState: CreatePaymentState, formData
   const { count: balanceCount, error: balanceError } = await supabase
     .from('balances')
     .select('id', { count: 'exact', head: true })
-    .eq('date', getTodayInPaymentTimeZone())
+    .eq('date', today)
 
   if (balanceError || !balanceCount) {
     return { error: 'Set today’s balance before adding a transaction.' }

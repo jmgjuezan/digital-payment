@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import SetBalanceFormWrapper from '@/components/balances/SetBalanceFormWrapper'
 import { hasBalanceManagementAccess } from '@/lib/balance-access'
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export const metadata: Metadata = {
   title: 'Add balance | Digital Payment',
@@ -16,10 +17,6 @@ export default async function NewBalancePage({
   searchParams: Promise<{ date?: string }>
 }) {
   const { date: requestedDate } = await searchParams
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
-  const returnDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today
-    ? requestedDate
-    : undefined
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -44,6 +41,10 @@ export default async function NewBalancePage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   if (!await hasBalanceManagementAccess(supabase, user.id)) redirect('/dashboard')
+  const today = getTodayInPaymentTimeZone(await getServerTime(supabase))
+  const returnDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today
+    ? requestedDate
+    : undefined
 
   return (
     <main className='dashboard-shell has-action-footer'>
@@ -72,7 +73,7 @@ export default async function NewBalancePage({
             <p>Record a GCash or Maya balance for a device today.</p>
           </div>
         </div>
-        <SetBalanceFormWrapper returnDate={returnDate} />
+        <SetBalanceFormWrapper returnDate={returnDate} today={today} />
       </section>
     </main>
   )

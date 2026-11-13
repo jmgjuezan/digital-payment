@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import SetBalanceForm from '@/components/balances/SetBalanceForm'
 import AddBalanceFooter from '@/components/balances/AddBalanceFooter'
 
-export default function SetBalanceFormWrapper({ returnDate }: { returnDate?: string }) {
+export default function SetBalanceFormWrapper({ returnDate, today }: { returnDate?: string; today?: string }) {
   const [pending, setPending] = useState(false)
   const handleActionChange = useCallback((_: () => void, isPending: boolean) => {
     setPending(isPending)
@@ -12,7 +12,7 @@ export default function SetBalanceFormWrapper({ returnDate }: { returnDate?: str
 
   return (
     <>
-      <SetBalanceForm onActionChange={handleActionChange} returnDate={returnDate} />
+      <SetBalanceForm onActionChange={handleActionChange} returnDate={returnDate} today={today} />
       <AddBalanceFooter pending={pending} returnDate={returnDate} />
     </>
   )

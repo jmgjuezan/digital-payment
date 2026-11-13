@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import DashboardTransactions, { type Payment } from '@/components/dashboard/DashboardTransactions'
 import DashboardTransactionsSkeleton from '@/components/dashboard/DashboardTransactionsSkeleton'
 import { getUserRole, resolvePaymentCreatorEmails } from '@/lib/balance-access'
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 const timeZone = 'Asia/Manila'
 
@@ -24,12 +25,14 @@ async function DashboardTransactionsData({
   userEmail,
   canManageBalances,
   canAddTransactions,
+  today,
 }: {
   dataPromise: Promise<DashboardData>
   selectedDate: string
   userEmail: string
   canManageBalances: boolean
   canAddTransactions: boolean
+  today: string
 }) {
   const { transactions, hasError } = await dataPromise
 
@@ -42,20 +45,9 @@ async function DashboardTransactionsData({
       userEmail={userEmail}
       canManageBalances={canManageBalances}
       canAddTransactions={canAddTransactions}
+      today={today}
     />
   )
-}
-
-function getTodayInTimeZone(zone: string) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: zone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
 }
 
 export default async function DashboardPage({
@@ -72,8 +64,9 @@ export default async function DashboardPage({
         transactions={[]}
         hasError
         timeZone={timeZone}
-        selectedDate={getTodayInTimeZone(timeZone)}
+        selectedDate=''
         userEmail=''
+        today=''
       />
     )
   }
@@ -96,6 +89,7 @@ export default async function DashboardPage({
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  const today = getTodayInPaymentTimeZone(await getServerTime(supabase))
   const role = await getUserRole(supabase, user.id)
   const canManageBalances = role === 'admin' || role === 'moderator'
   const canAddTransactions = role === 'admin' || role === 'user'
@@ -104,7 +98,6 @@ export default async function DashboardPage({
     : 'id, created_at, type, tran_id, date, time, charge, amount, device, note'
 
   const { date: requestedDate } = await searchParams
-  const today = getTodayInTimeZone(timeZone)
   const selectedDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today
     ? requestedDate
     : today
@@ -128,6 +121,7 @@ export default async function DashboardPage({
         userEmail={user.email ?? ''}
         canManageBalances={canManageBalances}
         canAddTransactions={canAddTransactions}
+        today={today}
       />
     </Suspense>
   )

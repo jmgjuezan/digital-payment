@@ -27,6 +27,7 @@ vi.mock('@supabase/ssr', () => ({
     auth: {
       getUser: mockGetUser,
     },
+    rpc: vi.fn().mockResolvedValue({ data: '2026-11-11T00:00:00.000Z', error: null }),
     from: (table: string) => table === 'user_roles'
       ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
       : { select: mockSelect },
@@ -87,10 +88,9 @@ describe('Dashboard Server Actions', () => {
       expect(mockGetUser).not.toHaveBeenCalled()
     })
 
-    it('rejects future dates without querying', async () => {
+    it('rejects future dates', async () => {
       const result = await getTransactionsForDate('2999-01-01')
       expect(result).toEqual({ transactions: [], hasError: true })
-      expect(mockGetUser).not.toHaveBeenCalled()
     })
 
     it('returns an error when Supabase is not configured', async () => {

@@ -3,40 +3,14 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { CircleHelp } from 'lucide-react'
 import { createPayment, type CreatePaymentState } from '@/app/transactions/new/actions'
+import { getCurrentServerTime } from '@/app/actions/server-time'
 import { calculatePaymentCharge } from '@/lib/payment-charge'
 import { paymentTypeOptions } from '@/lib/payment-options'
+import { getTimeInPaymentTimeZone, getTodayInPaymentTimeZone, getYesterdayInPaymentTimeZone } from '@/lib/server-time'
 
 const initialState: CreatePaymentState = {}
-const paymentTimeZone = 'Asia/Manila'
 
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: paymentTimeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
-function getCurrentTimeInPaymentTimeZone() {
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: paymentTimeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date())
-}
-
-function getYesterdayInPaymentTimeZone() {
-  const yesterday = new Date(`${getTodayInPaymentTimeZone()}T00:00:00Z`)
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-  return yesterday.toISOString().slice(0, 10)
-}
-
-export default function NewTransactionForm() {
+export default function NewTransactionForm({ initialServerTime }: { initialServerTime: string }) {
   const [state, action, pending] = useActionState(createPayment, initialState)
   const [paymentType, setPaymentType] = useState('')
   const [paymentTypeQuery, setPaymentTypeQuery] = useState('')
@@ -48,9 +22,9 @@ export default function NewTransactionForm() {
   const [deviceMenuOpen, setDeviceMenuOpen] = useState(false)
   const [activeDeviceIndex, setActiveDeviceIndex] = useState(-1)
   const [deviceSelectionError, setDeviceSelectionError] = useState(false)
-  const [paymentDate, setPaymentDate] = useState(getTodayInPaymentTimeZone)
-  const [paymentTime, setPaymentTime] = useState('')
-  const [currentPaymentTime, setCurrentPaymentTime] = useState('')
+  const [serverTime, setServerTime] = useState(initialServerTime)
+  const [paymentDate, setPaymentDate] = useState(() => getTodayInPaymentTimeZone(new Date(initialServerTime)))
+  const [paymentTime, setPaymentTime] = useState(() => `${getTimeInPaymentTimeZone(new Date(initialServerTime)).slice(0, 2)}:00`)
   const [amount, setAmount] = useState('')
   const [charge, setCharge] = useState('')
   const [transactionId, setTransactionId] = useState('')
@@ -61,8 +35,10 @@ export default function NewTransactionForm() {
   const chargeHelpTooltipRef = useRef<HTMLSpanElement>(null)
   const formErrorRef = useRef<HTMLParagraphElement>(null)
   const transactionIdRequired = Boolean(paymentType) && !paymentType.endsWith('Load')
-  const today = getTodayInPaymentTimeZone()
-  const yesterday = getYesterdayInPaymentTimeZone()
+  const serverDate = new Date(serverTime)
+  const today = getTodayInPaymentTimeZone(serverDate)
+  const yesterday = getYesterdayInPaymentTimeZone(serverDate)
+  const currentPaymentTime = getTimeInPaymentTimeZone(serverDate)
   const savingDialogRef = useRef<HTMLDialogElement>(null)
   const paymentTypeInputRef = useRef<HTMLInputElement>(null)
   const deviceInputRef = useRef<HTMLInputElement>(null)
@@ -75,13 +51,19 @@ export default function NewTransactionForm() {
   )
 
   useEffect(() => {
-    const now = getCurrentTimeInPaymentTimeZone()
-    setCurrentPaymentTime(now)
-    setPaymentTime((currentPaymentTime) => currentPaymentTime || now)
-    const intervalId = window.setInterval(() => setCurrentPaymentTime(getCurrentTimeInPaymentTimeZone()), 30_000)
+    const intervalId = window.setInterval(() => {
+      void getCurrentServerTime().then((time) => {
+        if (time) setServerTime(time)
+      })
+    }, 30_000)
 
     return () => window.clearInterval(intervalId)
   }, [])
+
+  async function refreshServerTime() {
+    const time = await getCurrentServerTime()
+    if (time) setServerTime(time)
+  }
 
   useEffect(() => {
     const dialog = savingDialogRef.current
@@ -191,16 +173,16 @@ export default function NewTransactionForm() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     setDismissedErrorState(state)
 
-    if (!paymentType) {
-      event.preventDefault()
-      setPaymentTypeSelectionError(true)
-      paymentTypeInputRef.current?.focus()
-      setPaymentTypeMenuOpen(true)
-    } else if (!device) {
+    if (!device) {
       event.preventDefault()
       setDeviceSelectionError(true)
       deviceInputRef.current?.focus()
       setDeviceMenuOpen(true)
+    } else if (!paymentType) {
+      event.preventDefault()
+      setPaymentTypeSelectionError(true)
+      paymentTypeInputRef.current?.focus()
+      setPaymentTypeMenuOpen(true)
     }
   }
 
@@ -208,68 +190,12 @@ export default function NewTransactionForm() {
     <>
     <form id='new-transaction-form' className='new-transaction-form' action={action} onSubmit={handleSubmit}>
       <div className='form-field'>
-        <label htmlFor='type'>Payment type <span aria-hidden='true'>*</span></label>
-        <div className='payment-type-combobox'>
-        <input
-          id='type'
-          ref={paymentTypeInputRef}
-          tabIndex={3}
-          type='text'
-          role='combobox'
-          aria-autocomplete='list'
-          aria-required='true'
-          aria-expanded={paymentTypeMenuOpen}
-          aria-controls='payment-type-options'
-          aria-activedescendant={paymentTypeMenuOpen && activePaymentTypeIndex >= 0 ? `payment-type-option-${activePaymentTypeIndex}` : undefined}
-          aria-describedby={paymentTypeSelectionError ? 'payment-type-error' : undefined}
-          required
-          autoComplete='off'
-          autoFocus
-          placeholder='Search payment type'
-          value={paymentTypeQuery}
-          onFocus={() => setPaymentTypeMenuOpen(true)}
-          onBlur={() => setPaymentTypeMenuOpen(false)}
-          onKeyDown={handlePaymentTypeKeyDown}
-          onChange={(event) => {
-            setPaymentTypeQuery(event.target.value)
-            setPaymentType('')
-            setCharge('')
-            setPaymentTypeSelectionError(false)
-            setPaymentTypeMenuOpen(true)
-            setActivePaymentTypeIndex(-1)
-          }}
-        />
-        <input type='hidden' name='type' value={paymentType} />
-        {paymentTypeMenuOpen && (
-          <ul className='payment-type-options' id='payment-type-options' role='listbox' aria-label='Payment type options'>
-            {filteredPaymentTypes.length > 0 ? filteredPaymentTypes.map((option, index) => (
-              <li
-                className={index === activePaymentTypeIndex ? 'payment-type-option is-active' : 'payment-type-option'}
-                id={`payment-type-option-${index}`}
-                key={option}
-                role='option'
-                aria-selected={paymentType === option}
-                onMouseEnter={() => setActivePaymentTypeIndex(index)}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectPaymentType(option)}
-              >
-                {option}
-              </li>
-            )) : (
-              <li className='payment-type-no-options' role='option' aria-selected={false} aria-disabled='true'>No matching payment types</li>
-            )}
-          </ul>
-        )}
-        </div>
-        {paymentTypeSelectionError && <span className='transaction-form-error payment-type-inline-error' id='payment-type-error' role='alert'>Select a payment type from the list.</span>}
-      </div>
-      <div className='form-field'>
         <label htmlFor='device'>Device <span aria-hidden='true'>*</span></label>
         <div className='payment-type-combobox'>
           <input
             id='device'
             ref={deviceInputRef}
-            tabIndex={4}
+            tabIndex={3}
             type='text'
             role='combobox'
             aria-autocomplete='list'
@@ -279,6 +205,7 @@ export default function NewTransactionForm() {
             aria-activedescendant={deviceMenuOpen && activeDeviceIndex >= 0 ? `device-option-${activeDeviceIndex}` : undefined}
             aria-describedby={deviceSelectionError ? 'device-selection-error' : undefined}
             autoComplete='off'
+            autoFocus
             placeholder='Search device'
             required
             value={deviceQuery}
@@ -319,6 +246,61 @@ export default function NewTransactionForm() {
         {deviceSelectionError && <span className='transaction-form-error payment-type-inline-error' id='device-selection-error' role='alert'>Select a device from the list.</span>}
       </div>
       <div className='form-field'>
+        <label htmlFor='type'>Payment type <span aria-hidden='true'>*</span></label>
+        <div className='payment-type-combobox'>
+        <input
+          id='type'
+          ref={paymentTypeInputRef}
+          tabIndex={4}
+          type='text'
+          role='combobox'
+          aria-autocomplete='list'
+          aria-required='true'
+          aria-expanded={paymentTypeMenuOpen}
+          aria-controls='payment-type-options'
+          aria-activedescendant={paymentTypeMenuOpen && activePaymentTypeIndex >= 0 ? `payment-type-option-${activePaymentTypeIndex}` : undefined}
+          aria-describedby={paymentTypeSelectionError ? 'payment-type-error' : undefined}
+          required
+          autoComplete='off'
+          placeholder='Search payment type'
+          value={paymentTypeQuery}
+          onFocus={() => setPaymentTypeMenuOpen(true)}
+          onBlur={() => setPaymentTypeMenuOpen(false)}
+          onKeyDown={handlePaymentTypeKeyDown}
+          onChange={(event) => {
+            setPaymentTypeQuery(event.target.value)
+            setPaymentType('')
+            setCharge('')
+            setPaymentTypeSelectionError(false)
+            setPaymentTypeMenuOpen(true)
+            setActivePaymentTypeIndex(-1)
+          }}
+        />
+        <input type='hidden' name='type' value={paymentType} />
+        {paymentTypeMenuOpen && (
+          <ul className='payment-type-options' id='payment-type-options' role='listbox' aria-label='Payment type options'>
+            {filteredPaymentTypes.length > 0 ? filteredPaymentTypes.map((option, index) => (
+              <li
+                className={index === activePaymentTypeIndex ? 'payment-type-option is-active' : 'payment-type-option'}
+                id={`payment-type-option-${index}`}
+                key={option}
+                role='option'
+                aria-selected={paymentType === option}
+                onMouseEnter={() => setActivePaymentTypeIndex(index)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectPaymentType(option)}
+              >
+                {option}
+              </li>
+            )) : (
+              <li className='payment-type-no-options' role='option' aria-selected={false} aria-disabled='true'>No matching payment types</li>
+            )}
+          </ul>
+        )}
+        </div>
+        {paymentTypeSelectionError && <span className='transaction-form-error payment-type-inline-error' id='payment-type-error' role='alert'>Select a payment type from the list.</span>}
+      </div>
+      <div className='form-field'>
         <label htmlFor='date'>Payment date <span aria-hidden='true'>*</span></label>
         <input
           id='date'
@@ -331,10 +313,8 @@ export default function NewTransactionForm() {
           onChange={(event) => {
             const selectedDate = event.target.value
             const nextPaymentDate = selectedDate && selectedDate < yesterday ? yesterday : selectedDate > today ? today : selectedDate
-            const now = getCurrentTimeInPaymentTimeZone()
-            setCurrentPaymentTime(now)
             setPaymentDate(nextPaymentDate)
-            if (nextPaymentDate === today && paymentTime > now) setPaymentTime(now)
+            if (nextPaymentDate === today && paymentTime > currentPaymentTime) setPaymentTime(currentPaymentTime)
           }}
           required
         />
@@ -348,12 +328,10 @@ export default function NewTransactionForm() {
           tabIndex={5}
           max={paymentDate === today ? currentPaymentTime : undefined}
           value={paymentTime}
-          onFocus={() => setCurrentPaymentTime(getCurrentTimeInPaymentTimeZone())}
+          onFocus={() => void refreshServerTime()}
           onChange={(event) => {
-            const now = getCurrentTimeInPaymentTimeZone()
             const selectedTime = event.target.value
-            setCurrentPaymentTime(now)
-            setPaymentTime(paymentDate === today && selectedTime > now ? now : selectedTime)
+            setPaymentTime(paymentDate === today && selectedTime > currentPaymentTime ? currentPaymentTime : selectedTime)
           }}
           required
         />

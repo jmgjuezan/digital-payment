@@ -8,8 +8,7 @@ import BalanceRecords, { type Balance } from '@/components/balances/BalanceRecor
 import BalancesDashboardSkeleton from '@/components/balances/BalancesDashboardSkeleton'
 import AppActionFooter from '@/components/layout/AppActionFooter'
 import { hasBalanceManagementAccess } from '@/lib/balance-access'
-
-const timeZone = 'Asia/Manila'
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export const metadata: Metadata = {
   title: 'Balances | Digital Payment',
@@ -32,9 +31,11 @@ type BalancesPageData = {
 async function BalancesDashboardData({
   dataPromise,
   selectedDate,
+  today,
 }: {
   dataPromise: Promise<BalancesPageData>
   selectedDate: string
+  today: string
 }) {
   const { balances, payments, hasError, hasPaymentError } = await dataPromise
 
@@ -45,20 +46,9 @@ async function BalancesDashboardData({
       hasError={hasError}
       hasPaymentError={hasPaymentError}
       selectedDate={selectedDate}
+      today={today}
     />
   )
-}
-
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
 }
 
 export default async function BalancesPage({
@@ -89,9 +79,9 @@ export default async function BalancesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   if (!await hasBalanceManagementAccess(supabase, user.id)) redirect('/dashboard')
+  const today = getTodayInPaymentTimeZone(await getServerTime(supabase))
 
   const { date: requestedDate } = await searchParams
-  const today = getTodayInPaymentTimeZone()
   const selectedDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today ? requestedDate : today
   const dataPromise = Promise.all([
     supabase
@@ -131,10 +121,10 @@ export default async function BalancesPage({
 
       <section className='dashboard-content' aria-labelledby='balances-title'>
         <Suspense fallback={<BalancesDashboardSkeleton selectedDate={selectedDate} />}>
-          <BalancesDashboardData dataPromise={dataPromise} selectedDate={selectedDate} />
+          <BalancesDashboardData dataPromise={dataPromise} selectedDate={selectedDate} today={today} />
         </Suspense>
       </section>
-      <AppActionFooter current='balances' canManageBalances selectedDate={selectedDate} />
+      <AppActionFooter current='balances' canManageBalances selectedDate={selectedDate} today={today} />
     </main>
   )
 }

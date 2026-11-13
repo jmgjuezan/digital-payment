@@ -10,9 +10,11 @@ import { calculatePaymentCharge } from '@/lib/payment-charge'
 export default function EditTransactionForm({
   payment,
   returnDate,
+  today = payment.date,
 }: {
   payment: Payment
   returnDate?: string
+  today?: string
 }) {
   const router = useRouter()
   const [error, setError] = useState('')
@@ -183,7 +185,7 @@ export default function EditTransactionForm({
       </div>
       <div className='form-field'>
         <label htmlFor='edit-date'>Payment date <span aria-hidden='true'>*</span></label>
-        <input id='edit-date' name='date' type='date' max={new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())} defaultValue={payment.date} required />
+        <input id='edit-date' name='date' type='date' max={today} defaultValue={payment.date} required />
       </div>
       <div className='form-field'>
         <label htmlFor='edit-time'>Payment time <span aria-hidden='true'>*</span></label>

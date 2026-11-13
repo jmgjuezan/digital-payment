@@ -8,6 +8,7 @@ const mockSelect = vi.fn()
 const mockEq = vi.fn()
 const mockInsert = vi.fn()
 const mockFrom = vi.fn()
+const mockRpc = vi.fn()
 
 vi.mock('next/navigation', () => ({
   redirect: (path: string) => {
@@ -25,6 +26,7 @@ vi.mock('next/headers', () => ({
 
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
+    rpc: mockRpc,
     auth: { getUser: mockGetUser },
     from: (table: string) => table === 'user_roles'
       ? { select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }
@@ -71,6 +73,7 @@ describe('createPayment — extended coverage', () => {
     mockInsert.mockResolvedValue({ error: null })
     mockFrom.mockReturnValue({ select: mockSelect, insert: mockInsert })
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockImplementation(() => Promise.resolve({ data: new Date().toISOString(), error: null }))
     mockRoleQuery.mockResolvedValue({ data: { role: 'user', email: 'user@example.com' }, error: null })
   })
 

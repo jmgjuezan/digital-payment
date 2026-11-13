@@ -15,6 +15,7 @@ vi.mock('@supabase/ssr', () => ({
     config.cookies.setAll([{ name: 'sb-test', value: 'test', options: {} }])
     return {
       auth: { getUser: mockGetUser },
+      rpc: vi.fn().mockResolvedValue({ data: '2026-11-11T00:00:00.000Z', error: null }),
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mockRoleQuery }) }) }),
     }
   }),

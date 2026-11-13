@@ -28,13 +28,17 @@ function getLocalTestCredentials() {
   }
 }
 
-function getTodayInPaymentTimeZone() {
+async function getTodayInPaymentTimeZone() {
+  const { data, error } = await getSupabaseClient().rpc('get_server_time')
+  expect(error).toBeNull()
+  if (typeof data !== 'string') throw new Error('The get_server_time RPC did not return a timestamp.')
+
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Manila',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date())
+  }).formatToParts(new Date(data))
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
 
   return `${values.year}-${values.month}-${values.day}`
@@ -64,11 +68,19 @@ describe('Supabase integration', () => {
     if (supabase) await supabase.auth.signOut()
   })
 
+  it('returns the database timestamp through the authenticated get_server_time RPC', async () => {
+    const { data, error } = await getSupabaseClient().rpc('get_server_time')
+
+    expect(error).toBeNull()
+    expect(typeof data).toBe('string')
+    expect(Number.isNaN(new Date(String(data)).getTime())).toBe(false)
+  })
+
   it('reads today’s balances through authenticated access and RLS', async () => {
     const { data, error } = await getSupabaseClient()
       .from('balances')
       .select('id, created_at, type, device, date, amount')
-      .eq('date', getTodayInPaymentTimeZone())
+      .eq('date', await getTodayInPaymentTimeZone())
       .limit(10)
 
     expect(error).toBeNull()
@@ -79,7 +91,7 @@ describe('Supabase integration', () => {
     const { data, error } = await getSupabaseClient()
       .from('payments')
       .select('id, created_at, type, tran_id, date, time, charge, amount, device, note')
-      .eq('date', getTodayInPaymentTimeZone())
+      .eq('date', await getTodayInPaymentTimeZone())
       .order('time', { ascending: false })
       .limit(10)
 

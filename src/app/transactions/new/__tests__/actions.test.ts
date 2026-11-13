@@ -6,6 +6,7 @@ const mockGetUser = vi.fn()
 const mockRoleQuery = vi.fn()
 const mockEq = vi.fn()
 const mockInsert = vi.fn()
+const mockRpc = vi.fn()
 
 vi.mock('next/navigation', () => ({
   redirect: (path: string) => {
@@ -23,6 +24,7 @@ vi.mock('next/headers', () => ({
 
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
+    rpc: mockRpc,
     auth: {
       getUser: mockGetUser,
     },
@@ -59,7 +61,7 @@ function getValidPaymentForm(overrides: Record<string, string> = {}) {
   const formData = new FormData()
   const fields = {
      date: todayForForm(),
-     time: '00:30:00',
+     time: '00:00:00',
     amount: '500',
     charge: '5',
     type: 'GCash Cash-in',
@@ -84,6 +86,7 @@ describe('createPayment action', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'public-anon-key'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockImplementation(() => Promise.resolve({ data: new Date().toISOString(), error: null }))
     mockRoleQuery.mockResolvedValue({ data: { role: 'user', email: 'user@example.com' }, error: null })
     mockEq.mockResolvedValue({ count: 1, error: null })
     mockInsert.mockResolvedValue({ error: null })
@@ -104,8 +107,7 @@ describe('createPayment action', () => {
   })
 
   it('rejects dates that are not yesterday or today', async () => {
-    const formData = new FormData()
-      formData.set('date', '2020-01-01')
+    const formData = getValidPaymentForm({ date: '2020-01-01' })
 
     const result = await createPayment({}, formData)
     expect(result).toEqual({ error: 'Payment date must be yesterday or today.' })
@@ -141,7 +143,7 @@ describe('createPayment action', () => {
   it('rejects non-positive amounts', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '00:30:00')
+      formData.set('time', '00:00:00')
     formData.set('amount', '0')
 
     const result = await createPayment({}, formData)
@@ -151,7 +153,7 @@ describe('createPayment action', () => {
   it('requires a transaction ID for non-load payment types', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '00:30:00')
+      formData.set('time', '00:00:00')
     formData.set('amount', '500')
     formData.set('type', 'GCash Cash-in')
     formData.set('tran_id', '')
@@ -163,7 +165,7 @@ describe('createPayment action', () => {
   it('allows load payment types without a transaction ID', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '00:30:00')
+      formData.set('time', '00:00:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Load')
@@ -193,7 +195,7 @@ describe('createPayment action', () => {
   it('rejects transaction IDs longer than 4 characters', async () => {
     const formData = new FormData()
     formData.set('date', today)
-    formData.set('time', '00:30:00')
+    formData.set('time', '00:00:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -209,7 +211,7 @@ describe('createPayment action', () => {
 
     const formData = new FormData()
     formData.set('date', today)
-    formData.set('time', '00:30:00')
+    formData.set('time', '00:00:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -285,7 +287,7 @@ describe('createPayment action', () => {
   it('saves the transaction and redirects to /dashboard on success', async () => {
     const formData = new FormData()
       formData.set('date', today)
-      formData.set('time', '00:30:00')
+      formData.set('time', '00:00:00')
     formData.set('amount', '500')
     formData.set('charge', '5')
     formData.set('type', 'GCash Cash-in')
@@ -298,7 +300,7 @@ describe('createPayment action', () => {
       type: 'GCash Cash-in',
       tran_id: '9999',
       date: today,
-      time: '00:30:00',
+      time: '00:00:00',
       charge: 5,
       amount: 500,
       device: 'CP1',

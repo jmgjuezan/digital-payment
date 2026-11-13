@@ -34,18 +34,6 @@ const currency = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 2,
 })
 
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
-
 function BalanceDataSkeleton({ viewMode, columns }: { viewMode: ViewMode; columns: number }) {
   if (viewMode === 'cards') {
     return (
@@ -86,12 +74,14 @@ export default function BalanceRecords({
   hasError: initialHasError,
   hasPaymentError: initialHasPaymentError,
   selectedDate: initialSelectedDate,
+  today: serverToday,
 }: {
   balances: Balance[]
   payments: BalancePayment[]
   hasError: boolean
   hasPaymentError: boolean
   selectedDate: string
+  today?: string
 }) {
   const [balances, setBalances] = useState(initialBalances)
   const [payments, setPayments] = useState(initialPayments)
@@ -102,7 +92,7 @@ export default function BalanceRecords({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const dateRequestId = useRef(0)
-  const today = getTodayInPaymentTimeZone()
+  const today = serverToday ?? initialSelectedDate
 
   async function handleDateChange(date: string) {
     if (!date || date > today || date === selectedDate) return

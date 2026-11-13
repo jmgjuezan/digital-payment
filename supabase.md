@@ -20,6 +20,8 @@ Migration `20261102000000_use_email_for_payment_creator.sql` replaces existing c
 
 Migration `20261103000000_admin_moderator_update_payments.sql` grants payment update access only to authenticated users with the `admin` or `moderator` role.
 
+Migration `20261109000000_add_get_server_time_function.sql` adds the authenticated `get_server_time()` RPC. App date and time defaults, limits, and validation use this Supabase timestamp formatted for `Asia/Manila`, rather than reading the browser or application server clock.
+
 ## Table `user_roles`
 
 ### Custom user roles

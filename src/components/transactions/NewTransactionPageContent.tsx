@@ -5,18 +5,7 @@ import { redirect } from 'next/navigation'
 import BalanceRequiredDialog from '@/components/transactions/BalanceRequiredDialog'
 import NewTransactionForm from '@/components/transactions/NewTransactionForm'
 import { getUserRole } from '@/lib/balance-access'
-
-function getTodayInPaymentTimeZone() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-
-  return `${values.year}-${values.month}-${values.day}`
-}
+import { getServerTime, getTodayInPaymentTimeZone } from '@/lib/server-time'
 
 export default async function NewTransactionPageContent() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -43,11 +32,13 @@ export default async function NewTransactionPageContent() {
   if (!user) redirect('/login')
   const role = await getUserRole(supabase, user.id)
   if (role !== 'admin' && role !== 'user') redirect('/dashboard')
+  const serverTime = await getServerTime(supabase)
+  const today = getTodayInPaymentTimeZone(serverTime)
 
   const { count, error } = await supabase
     .from('balances')
     .select('id', { count: 'exact', head: true })
-    .eq('date', getTodayInPaymentTimeZone())
+    .eq('date', today)
 
   const requiresBalance = Boolean(error) || !count
 
@@ -80,7 +71,7 @@ export default async function NewTransactionPageContent() {
         </div>
         {requiresBalance ? (
           <BalanceRequiredDialog open hasError={Boolean(error)} canManageBalances={role === 'admin'} onClose={() => redirect('/dashboard')} />
-        ) : <NewTransactionForm />}
+        ) : <NewTransactionForm initialServerTime={serverTime.toISOString()} />}
       </section>
     </main>
   )
