@@ -168,6 +168,63 @@ describe('NewTransactionForm — extended coverage', () => {
       const chargeInput = screen.getByRole('spinbutton', { name: /charge/i }) as HTMLInputElement
       expect(chargeInput.value).toBe('')
     })
+
+    it('clears payment type when user enters a value not in the autocomplete list and blurs', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      selectDevice('ME')
+
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i }) as HTMLInputElement
+      fireEvent.focus(typeInput)
+      fireEvent.change(typeInput, { target: { value: 'Cryptocurrency' } })
+      expect(typeInput.value).toBe('Cryptocurrency')
+
+      fireEvent.blur(typeInput)
+      expect(typeInput.value).toBe('')
+    })
+
+    it('clears payment type when user enters a value not in the autocomplete list and presses Enter', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      selectDevice('ME')
+
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i }) as HTMLInputElement
+      fireEvent.focus(typeInput)
+      fireEvent.change(typeInput, { target: { value: 'INVALID_TYPE' } })
+      expect(typeInput.value).toBe('INVALID_TYPE')
+
+      fireEvent.keyDown(typeInput, { key: 'Enter' })
+      expect(typeInput.value).toBe('')
+    })
+
+    it('clears payment type when user enters a value not in the autocomplete list and submits', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      selectDevice('ME')
+
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i }) as HTMLInputElement
+      fireEvent.focus(typeInput)
+      fireEvent.change(typeInput, { target: { value: 'PayPal' } })
+
+      const form = document.getElementById('new-transaction-form') as HTMLFormElement
+      fireEvent.submit(form)
+
+      expect(typeInput.value).toBe('')
+      expect(screen.getByText(/select a payment type from the list/i)).toBeInTheDocument()
+    })
+
+    it('selects the matching payment type when user enters valid type name with different casing and blurs', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      selectDevice('ME')
+
+      const typeInput = screen.getByRole('combobox', { name: /payment type/i }) as HTMLInputElement
+      fireEvent.focus(typeInput)
+      fireEvent.change(typeInput, { target: { value: 'gcash cash-in' } })
+
+      fireEvent.blur(typeInput)
+      expect(typeInput.value).toBe('GCash Cash-in')
+    })
   })
 
   describe('device combobox', () => {
@@ -248,6 +305,55 @@ describe('NewTransactionForm — extended coverage', () => {
       fireEvent.submit(form)
 
       expect(screen.getByText(/select a payment type from the list/i)).toBeInTheDocument()
+    })
+
+    it('clears device when user enters a value not in the autocomplete list and blurs', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      const deviceInput = screen.getByRole('combobox', { name: /device/i }) as HTMLInputElement
+      fireEvent.focus(deviceInput)
+      fireEvent.change(deviceInput, { target: { value: 'CP99' } })
+      expect(deviceInput.value).toBe('CP99')
+
+      fireEvent.blur(deviceInput)
+      expect(deviceInput.value).toBe('')
+    })
+
+    it('clears device when user enters a value not in the autocomplete list and presses Enter', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      const deviceInput = screen.getByRole('combobox', { name: /device/i }) as HTMLInputElement
+      fireEvent.focus(deviceInput)
+      fireEvent.change(deviceInput, { target: { value: 'UNKNOWN' } })
+      expect(deviceInput.value).toBe('UNKNOWN')
+
+      fireEvent.keyDown(deviceInput, { key: 'Enter' })
+      expect(deviceInput.value).toBe('')
+    })
+
+    it('clears device when user enters a value not in the autocomplete list and submits', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      const deviceInput = screen.getByRole('combobox', { name: /device/i }) as HTMLInputElement
+      fireEvent.focus(deviceInput)
+      fireEvent.change(deviceInput, { target: { value: 'INVALID_DEVICE' } })
+
+      const form = document.getElementById('new-transaction-form') as HTMLFormElement
+      fireEvent.submit(form)
+
+      expect(deviceInput.value).toBe('')
+      expect(screen.getByText(/select a device from the list/i)).toBeInTheDocument()
+    })
+
+    it('selects the matching device when user enters valid device name with different casing and blurs', () => {
+      render(<NewTransactionForm initialServerTime='2026-11-09T16:47:00.000Z' />)
+
+      const deviceInput = screen.getByRole('combobox', { name: /device/i }) as HTMLInputElement
+      fireEvent.focus(deviceInput)
+      fireEvent.change(deviceInput, { target: { value: 'cp3' } })
+
+      fireEvent.blur(deviceInput)
+      expect(deviceInput.value).toBe('CP3')
     })
 
     it('shows only GCash options when a standard CP device is selected', () => {

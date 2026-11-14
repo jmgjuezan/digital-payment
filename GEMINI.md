@@ -65,7 +65,7 @@ Charges are auto-computed from the payment type and amount:
 ### 3.5 Date & Time Constraints
 - **Allowed Payment Dates**: Only **yesterday** or **today** (based on `Asia/Manila` server time). Future dates are forbidden.
 - **Allowed Payment Times**: When the date is **today**, the payment time cannot be in the future relative to server time.
-- **Time Defaults**: Defaults to the start of the current hour (e.g., `14:00`).
+- **Time Defaults**: Defaults to current time (e.g., `14:35`) based on `Asia/Manila` server time.
 
 ### 3.6 Daily Balance Prerequisite Gate
 - **Balance Prerequisite**: A transaction cannot be created unless **at least one balance has been recorded for today** (`balances` table row with `date = today`).

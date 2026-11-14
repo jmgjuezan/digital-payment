@@ -24,7 +24,7 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
   const [deviceSelectionError, setDeviceSelectionError] = useState(false)
   const [serverTime, setServerTime] = useState(initialServerTime)
   const [paymentDate, setPaymentDate] = useState(() => getTodayInPaymentTimeZone(new Date(initialServerTime)))
-  const [paymentTime, setPaymentTime] = useState(() => `${getTimeInPaymentTimeZone(new Date(initialServerTime)).slice(0, 2)}:00`)
+  const [paymentTime, setPaymentTime] = useState(() => getTimeInPaymentTimeZone(new Date(initialServerTime)))
   const [amount, setAmount] = useState('')
   const [charge, setCharge] = useState('')
   const [transactionId, setTransactionId] = useState('')
@@ -123,6 +123,27 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
     setCharge(calculatedCharge > 0 ? calculatedCharge.toFixed(2) : '')
   }
 
+  function clearPaymentType() {
+    setPaymentType('')
+    setPaymentTypeQuery('')
+    setCharge('')
+    setActivePaymentTypeIndex(-1)
+  }
+
+  function handlePaymentTypeBlur() {
+    setPaymentTypeMenuOpen(false)
+    setActivePaymentTypeIndex(-1)
+
+    const matchingType = availablePaymentTypes.find(
+      (option) => option.toLowerCase() === paymentTypeQuery.trim().toLowerCase(),
+    )
+    if (matchingType) {
+      selectPaymentType(matchingType)
+    } else {
+      clearPaymentType()
+    }
+  }
+
   function handlePaymentTypeKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -132,14 +153,34 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
       event.preventDefault()
       setPaymentTypeMenuOpen(true)
       setActivePaymentTypeIndex((index) => filteredPaymentTypes.length ? (index <= 0 ? filteredPaymentTypes.length - 1 : index - 1) : -1)
-    } else if (event.key === 'Enter' && paymentTypeMenuOpen && filteredPaymentTypes.length > 0) {
-      event.preventDefault()
-      const selectedIndex = filteredPaymentTypes.findIndex((option) => option === paymentType)
-      const optionIndex = activePaymentTypeIndex >= 0 ? activePaymentTypeIndex : selectedIndex >= 0 ? selectedIndex : 0
-      selectPaymentType(filteredPaymentTypes[optionIndex])
+    } else if (event.key === 'Enter') {
+      if (paymentTypeMenuOpen && filteredPaymentTypes.length > 0) {
+        event.preventDefault()
+        const selectedIndex = filteredPaymentTypes.findIndex((option) => option === paymentType)
+        const optionIndex = activePaymentTypeIndex >= 0 ? activePaymentTypeIndex : selectedIndex >= 0 ? selectedIndex : 0
+        selectPaymentType(filteredPaymentTypes[optionIndex])
+      } else {
+        const matchingType = availablePaymentTypes.find(
+          (option) => option.toLowerCase() === paymentTypeQuery.trim().toLowerCase(),
+        )
+        if (matchingType) {
+          event.preventDefault()
+          selectPaymentType(matchingType)
+        } else if (paymentTypeQuery.trim() !== '') {
+          event.preventDefault()
+          clearPaymentType()
+          setPaymentTypeMenuOpen(false)
+        }
+      }
     } else if (event.key === 'Escape') {
       setPaymentTypeMenuOpen(false)
       setActivePaymentTypeIndex(-1)
+      const matchingType = availablePaymentTypes.find(
+        (option) => option.toLowerCase() === paymentTypeQuery.trim().toLowerCase(),
+      )
+      if (!matchingType) {
+        clearPaymentType()
+      }
     }
   }
 
@@ -164,6 +205,31 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
     }
   }
 
+  function clearDevice() {
+    setDevice('')
+    setDeviceQuery('')
+    setActiveDeviceIndex(-1)
+    if (paymentType) {
+      setPaymentType('')
+      setPaymentTypeQuery('')
+      setCharge('')
+    }
+  }
+
+  function handleDeviceBlur() {
+    setDeviceMenuOpen(false)
+    setActiveDeviceIndex(-1)
+
+    const matchingDevice = deviceOptions.find(
+      (option) => option.toLowerCase() === deviceQuery.trim().toLowerCase(),
+    )
+    if (matchingDevice) {
+      selectDevice(matchingDevice)
+    } else {
+      clearDevice()
+    }
+  }
+
   function handleDeviceKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -173,30 +239,63 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
       event.preventDefault()
       setDeviceMenuOpen(true)
       setActiveDeviceIndex((index) => filteredDevices.length ? (index <= 0 ? filteredDevices.length - 1 : index - 1) : -1)
-    } else if (event.key === 'Enter' && deviceMenuOpen && filteredDevices.length > 0) {
-      event.preventDefault()
-      const selectedIndex = filteredDevices.indexOf(device)
-      const optionIndex = activeDeviceIndex >= 0 ? activeDeviceIndex : selectedIndex >= 0 ? selectedIndex : 0
-      selectDevice(filteredDevices[optionIndex])
+    } else if (event.key === 'Enter') {
+      if (deviceMenuOpen && filteredDevices.length > 0) {
+        event.preventDefault()
+        const selectedIndex = filteredDevices.indexOf(device)
+        const optionIndex = activeDeviceIndex >= 0 ? activeDeviceIndex : selectedIndex >= 0 ? selectedIndex : 0
+        selectDevice(filteredDevices[optionIndex])
+      } else {
+        const matchingDevice = deviceOptions.find(
+          (option) => option.toLowerCase() === deviceQuery.trim().toLowerCase(),
+        )
+        if (matchingDevice) {
+          event.preventDefault()
+          selectDevice(matchingDevice)
+        } else if (deviceQuery.trim() !== '') {
+          event.preventDefault()
+          clearDevice()
+          setDeviceMenuOpen(false)
+        }
+      }
     } else if (event.key === 'Escape') {
       setDeviceMenuOpen(false)
       setActiveDeviceIndex(-1)
+      const matchingDevice = deviceOptions.find(
+        (option) => option.toLowerCase() === deviceQuery.trim().toLowerCase(),
+      )
+      if (!matchingDevice) {
+        clearDevice()
+      }
     }
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     setDismissedErrorState(state)
 
-    if (!device) {
+    const matchingDevice = deviceOptions.find(
+      (option) => option.toLowerCase() === deviceQuery.trim().toLowerCase(),
+    )
+
+    if (!matchingDevice) {
+      clearDevice()
       event.preventDefault()
       setDeviceSelectionError(true)
       deviceInputRef.current?.focus()
       setDeviceMenuOpen(true)
-    } else if (!paymentType) {
-      event.preventDefault()
-      setPaymentTypeSelectionError(true)
-      paymentTypeInputRef.current?.focus()
-      setPaymentTypeMenuOpen(true)
+    } else {
+      const availableTypes = getPaymentTypesForDevice(matchingDevice)
+      const matchingType = availableTypes.find(
+        (option) => option.toLowerCase() === paymentTypeQuery.trim().toLowerCase(),
+      )
+
+      if (!matchingType) {
+        clearPaymentType()
+        event.preventDefault()
+        setPaymentTypeSelectionError(true)
+        paymentTypeInputRef.current?.focus()
+        setPaymentTypeMenuOpen(true)
+      }
     }
   }
 
@@ -224,7 +323,7 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
             required
             value={deviceQuery}
             onFocus={() => setDeviceMenuOpen(true)}
-            onBlur={() => setDeviceMenuOpen(false)}
+            onBlur={handleDeviceBlur}
             onKeyDown={handleDeviceKeyDown}
             onChange={(event) => {
               setDeviceQuery(event.target.value)
@@ -280,7 +379,7 @@ export default function NewTransactionForm({ initialServerTime }: { initialServe
           placeholder={device ? 'Search payment type' : 'Select a device first'}
           value={paymentTypeQuery}
           onFocus={() => setPaymentTypeMenuOpen(true)}
-          onBlur={() => setPaymentTypeMenuOpen(false)}
+          onBlur={handlePaymentTypeBlur}
           onKeyDown={handlePaymentTypeKeyDown}
           onChange={(event) => {
             setPaymentTypeQuery(event.target.value)

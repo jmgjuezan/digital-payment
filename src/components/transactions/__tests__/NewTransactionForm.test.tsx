@@ -65,14 +65,15 @@ describe('NewTransactionForm Component', () => {
     expect(dateInput.value).toBe(dateInput.min)
   })
 
-  it('defaults payment time to the current server hour and keeps minutes editable', () => {
+  it('defaults payment time to the current server time and keeps minutes editable', () => {
     const { unmount } = render(<NewTransactionForm initialServerTime={initialServerTime} />)
 
     try {
       const paymentTime = screen.getByLabelText(/payment time/i) as HTMLInputElement
-      expect(paymentTime).toHaveValue('00:00')
+      expect(paymentTime).toHaveValue('00:47')
       fireEvent.change(paymentTime, { target: { value: '00:35' } })
       expect(paymentTime).toHaveValue('00:35')
+      fireEvent.focus(paymentTime)
     } finally {
       unmount()
     }
