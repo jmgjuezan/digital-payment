@@ -103,16 +103,6 @@ describe('updatePayment action', () => {
     expect(mockUpdate).toHaveBeenCalled()
   })
 
-  it('rejects moderator editing someone else\'s transaction', async () => {
-    mockRoleQuery.mockResolvedValue({ data: { role: 'moderator' }, error: null })
-    mockPaymentSingle.mockResolvedValue({ data: { created_by: 'other-user' }, error: null })
-
-    await expect(updatePayment(42, getValidPaymentForm())).resolves.toEqual({
-      error: 'You can only edit your own transactions.',
-    })
-    expect(mockUpdate).not.toHaveBeenCalled()
-  })
-
   it('rejects users without edit permission without updating', async () => {
     mockRoleQuery.mockResolvedValue({ data: { role: 'user' }, error: null })
 

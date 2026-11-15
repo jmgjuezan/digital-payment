@@ -12,7 +12,7 @@ This document outlines the security standards and practices for the Digital Paym
 ### Role-Based Access Control (RBAC)
 The application uses three user roles:
 - **admin**: Full access to all features including editing any transaction
-- **moderator**: Can manage balances and view transactions, but can only edit their own transactions
+- **moderator**: Can manage balances and view/edit transactions
 - **user**: Can create transactions and view data, but cannot manage balances
 
 **Implementation Rules:**
@@ -23,9 +23,7 @@ The application uses three user roles:
 ### Resource-Level Authorization
 For operations that modify specific resources (e.g., editing a payment):
 1. Fetch the resource first to verify it exists
-2. Check if the user created the resource (for non-admin roles)
-3. Allow admins to modify any resource
-4. Allow moderators and users to only modify their own resources
+2. Allow admins and moderators to modify any resource
 
 **Example:**
 ```typescript
@@ -37,9 +35,6 @@ const { data: payment } = await supabase
   .single()
 
 if (!payment) return { error: 'Transaction not found.' }
-if (role !== 'admin' && payment.created_by !== user.id) {
-  return { error: 'You can only edit your own transactions.' }
-}
 ```
 
 ## Input Validation

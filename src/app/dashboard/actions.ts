@@ -102,9 +102,6 @@ export async function updatePayment(paymentId: number, formData: FormData, retur
     .single()
 
   if (!payment) return { error: 'Transaction not found.' }
-  if (role !== 'admin' && payment.created_by !== user.id) {
-    return { error: 'You can only edit your own transactions.' }
-  }
 
   const { error } = await supabase
     .from('payments')
